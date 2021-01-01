@@ -1,0 +1,758 @@
+function ent_helper_init()
+{
+  sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_map_begin "ent_set_valid"
+}
+
+function ent_set_valid()
+{
+  sf_sv_mem_read_int ENTITY_START 1343605920‬ 
+  set ENTITY_END #ENTITY_START
+  sf_sv_int_add ENTITY_END 1150976
+}
+function ent_set_health(~ent,~val)
+{
+  sp_sc_func_exec validEnt #~ent
+  sp_sc_flow_if number cvar ENT_VALID == val 1
+  {
+    sf_sv_int_add ~ent $EDICT_HEALTH
+    sf_sv_mem_write_int $~ent #~val
+  }
+  else
+  {
+    sset ~msg "DEBUG: invalid ent health" #~ent
+    //echo #~msg
+  }
+}
+
+function ent_set_health_max(~ent,~val)
+{
+  sp_sc_func_exec validEnt #~ent
+  sp_sc_flow_if number cvar ENT_VALID == val 1
+  {
+    sf_sv_int_add ~ent $EDICT_HEALTH_MAX
+    sf_sv_mem_write_int $~ent #~val
+  }
+  else
+  {
+    sset ~msg "DEBUG: invalid ent health" #~ent
+    echo #~msg
+  }
+}
+
+function ent_get_health(~ent)
+{
+  sp_sc_func_exec validEnt #~ent
+  sp_sc_flow_if number cvar ENT_VALID == val 1
+  {
+    sf_sv_int_add ~ent $EDICT_HEALTH
+    sf_sv_mem_read_int ent_get_val $~ent
+  }
+  else
+  {
+    sset ~msg "DEBUG: invalid ent g health" #~ent
+    echo #~msg
+  } 
+}
+
+function ent_set_solid(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_SOLID
+  sf_sv_mem_write_int $~ent #~val
+}
+
+function ent_set_classname(~ent,~val)
+{
+  echo "classname"
+  sf_sv_int_add ~ent $EDICT_CLASSNAME
+  sf_sv_mem_write_string $~ent #~val
+}
+
+function ent_set_targetname(~ent,~val)
+{
+  echo "target name"
+  sf_sv_int_add ~ent $EDICT_TARGETNAME
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_target(~ent,~val)
+{
+  echo "target"
+  sf_sv_int_add ~ent $EDICT_TARGET
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_origin(~ent,~x,~y,~z)
+{
+  echo "origin"
+  sf_sv_int_add ~ent $EDICT_S_ORIGIN
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 8
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 12
+  sf_sv_mem_write_float $~ent #~z
+}
+
+function ent_set_model(~ent,~val)
+{
+  echo "model"
+  sf_sv_int_add ~ent $EDICT_MODEL
+  sf_sv_mem_write_string $~ent #~val
+}
+
+function ent_get_origin(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_S_ORIGIN
+  sf_sv_mem_read_float ent_get_x $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_y $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_z $~ent 
+}
+//broken
+function ent_set_angles(~ent,~x,~y)
+{
+  sp_sc_cvar_math_mul ~x 182
+  //sp_sc_cvar_math_mul ~y 182
+  sf_sv_int_add ~ent $EDICT_S_ANGLES
+  sf_sv_mem_write_int ~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_int ~ent #~y
+}
+function .get(*)
+{
+  sf_sv_player_ent ~ok #~1
+  sp_sc_func_exec ent_get_angles #~ok 
+}
+function ent_get_angles(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_S_ANGLES
+  sf_sv_mem_read_float ent_get_x $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_y $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_z $~ent 
+  sp_sc_cvar_list ent_get_?
+  sset ~cmd sp_sc_func_exec ent_get_angles #~ent
+  sp_sc_timer 500 #~cmd
+}
+
+
+function player_set_angles(~ent,~x,~y)
+{
+  sp_sc_func_exec validEnt #~ent
+  sp_sc_flow_if number cvar ENT_VALID == val 1
+  {
+    sp_sc_cvar_math_mul ~x 182
+    sp_sc_cvar_math_mul ~y 182
+    sp_sc_cvar_list ~*
+    sf_sv_int_add ~ent $EDICT_GCLIENT
+    sf_sv_mem_read_int ~cl $~ent
+    sp_sc_flow_if number cvar ~cl != val 0
+    {
+      sf_sv_int_add ~cl $CLIENT_PMOVE_DELTAANGLES
+      sf_sv_mem_write_short $~cl #~x
+      sf_sv_int_add ~cl 2
+      sf_sv_mem_write_short $~cl #~y
+    }
+    else
+    {
+      echo "DEBUG: CL = 0"
+    }
+  }
+  else
+  {
+    sset ~msg "DEBUG: invalid ent angles" #~ent
+    echo #~msg
+  }
+}
+
+
+function ent_set_skin(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_SKIN
+  sf_sv_mem_write_int $~ent #~val
+}
+
+function ent_set_friction(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_FRICTION
+  sf_sv_mem_write_float $~ent #~val
+}
+
+function ent_get_friction(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_FRICTION
+  sf_sv_mem_read_float ent_get_val $~ent
+}
+
+function ent_set_gravity(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_GRAVITY
+  sf_sv_mem_write_float $~ent #~val
+}
+
+function ent_get_gravity(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_GRAVITY
+  sf_sv_mem_read_float ent_get_val $~ent
+}
+
+function ent_set_airresistance(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_AIRRESISTANCE
+  sf_sv_mem_write_float $~ent #~val
+}
+
+function ent_set_bouyancy(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_BOUYANCY
+  sf_sv_mem_write_float $~ent #~val
+}
+
+function ent_set_stopspeed(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_STOPSPEED
+  sf_sv_mem_write_float $~ent #~val
+}
+
+
+function ent_set_mass(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_MASS
+  sf_sv_mem_write_int $~ent #~val
+}
+function ent_get_mass(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_MASS
+  sf_sv_mem_read_int ent_get_val $~ent
+}
+
+
+function ent_set_movetype(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_MOVETYPE
+  sf_sv_mem_write_int $~ent #~val
+}
+
+function ent_get_movetype(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_MOVETYPE
+  sf_sv_mem_read_int ent_get_val $~ent
+}
+
+function ent_set_velocity(~ent,~x,~y,~z)
+{
+  sp_sc_func_exec validEnt #~ent
+  sp_sc_flow_if number cvar ENT_VALID == val 1
+  {
+    sf_sv_int_add ~ent $EDICT_VELOCITY
+    sf_sv_mem_write_float $~ent #~x
+    sf_sv_int_add ~ent 4
+    sf_sv_mem_write_float $~ent #~y
+    sf_sv_int_add ~ent 4
+    sf_sv_mem_write_float $~ent #~z
+  }
+  else
+  {
+    echo "DEBUG: invalid ent VELOCITY"
+  }
+}
+
+function ent_get_velocity(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_VELOCITY
+  sf_sv_mem_read_float ent_get_x $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_y $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_z $~ent 
+}
+
+
+function validEnt(~ent)
+{
+  zero ENT_VALID
+  sp_sc_flow_if number cvar ~ent >= cvar ENTITY_START
+  {
+    sp_sc_flow_if number cvar ~ent < cvar ENTITY_END
+    {
+      set ENT_VALID 1
+    }
+  }
+}
+
+function player_set_gravity(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~cl $~ent
+  sp_sc_flow_if number cvar ~cl != val 0
+  {
+    sset ~msg "set grav to" #~val
+    echo #~msg
+    sf_sv_int_add ~cl $CLIENT_GRAVITY
+    sf_sv_mem_write_short $~cl #~val
+  }
+  else
+  {
+    echo "DEBUG: CL = 0"
+  }
+}
+
+function player_set_movescale(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~cl $~ent
+  sf_sv_int_add ~cl $CLIENT_MOVESCALE
+  sf_sv_mem_write_short $~cl #~val
+}
+
+
+
+function slot_set_velocity(~slot,~x,~y,~z)
+{
+  sf_sv_player_ent ~ent #~slot
+  sf_sv_int_add ~ent $EDICT_VELOCITY
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~z
+}
+
+function ent_set_velocity(~ent,~x,~y,~z)
+{
+  sf_sv_int_add ~ent $EDICT_VELOCITY
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~z
+}
+
+function slot_set_gravity(~slot,~val)
+{
+  sf_sv_player_ent ~ent #~slot
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~ent $~ent
+  sf_sv_int_add ~ent $CLIENT_GRAVITY
+  sf_sv_mem_write_short $~ent #~val
+}
+
+function client_set_gravity(~slot)
+{
+  echo "set gravity"
+  sp_sc_func_exec slot_set_gravity #~slot 800
+}
+
+function slot_set_movescale(~slot,~val)
+{
+  sf_sv_player_ent ~ent #~slot
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~ent $~ent
+  sf_sv_int_add ~ent $CLIENT_MS_FLOAT
+  sf_sv_mem_read_float ~test $~ent
+  sf_sv_mem_write_float $~ent $~val
+}
+
+function ent_set_classname(~ent,~val)
+{
+  // echo "classname"
+  sf_sv_int_add ~ent $EDICT_CLASSNAME
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_soundname(~ent,~val)
+{
+  // echo "soundname"
+  sf_sv_int_add ~ent $EDICT_SOUNDNAME
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_targetname(~ent,~val)
+{
+  // echo "taget name"
+  //sp_sc_cvar_list ~val
+  sf_sv_int_add ~ent $EDICT_TARGETNAME
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_target(~ent,~val)
+{
+  // echo "target"
+  sf_sv_int_add ~ent $EDICT_TARGET
+  sf_sv_mem_write_string $~ent #~val
+}
+function ent_set_origin(~ent,~x,~y,~z)
+{
+  //set EDICT_S_ORIGIN 4
+  // echo "origin"
+  sf_sv_int_add ~ent $EDICT_S_ORIGIN
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~z
+}
+
+
+function ent_set_pos1(~ent,~x,~y,~z)
+{
+  //set EDICT_S_ORIGIN 4
+  // echo "origin"
+  sf_sv_int_add ~ent $EDICT_POS1
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~z
+}
+
+function ent_get_origin(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_S_ORIGIN
+  sf_sv_mem_read_float ent_get_x $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_y $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_z $~ent 
+}
+
+function ent_get_pos1(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_POS1
+  sf_sv_mem_read_float ent_get_x $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_y $~ent 
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_read_float ent_get_z $~ent 
+}
+
+function ent_set_model(~ent,~val)
+{
+  // echo "model"
+  sf_sv_int_add ~ent $EDICT_MODEL
+  sf_sv_mem_write_string $~ent #~val
+}
+
+function ent_set_think(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_THINK
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+}
+
+function ent_get_skinnum(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_SKINNUM
+  sf_sv_mem_read_int GLOBAL_skinnum $~ent 
+}
+
+function ent_set_angles(~ent,~x,~y)
+{
+  sp_sc_cvar_math_mul ~x 182
+  //sp_sc_cvar_math_mul ~y 182
+  sf_sv_int_add ~ent $EDICT_S_ANGLES
+  sf_sv_mem_write_float $~ent #~x
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~y
+  sf_sv_int_add ~ent 4
+  sf_sv_mem_write_float $~ent #~z
+}
+
+
+function ent_add_score(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $EDICT_SCORE
+  sf_sv_mem_read_int ~score $~gclient
+  add ~score $~val
+  sf_sv_mem_write_int $~gclient $~score
+}
+
+function ent_get_score(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $EDICT_SCORE
+  sf_sv_mem_read_int GLOBAL_score $~gclient 
+}
+
+
+function ent_set_score(~ent,~score)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $EDICT_SCORE
+  sf_sv_mem_write_int $~gclient $~score
+}
+
+function ent_set_nextthink(~ent,~nextthink)
+{
+  sf_sv_int_add ~ent $EDICT_NEXT_THINK
+  sf_sv_mem_write_int $~ent $~nextthink
+}
+
+function ent_set_movetype(~ent,~val)
+{
+  sf_sv_int_add ~ent $EDICT_MOVETYPE
+  sf_sv_mem_write_int $~ent $~val
+}
+function ent_get_movetype(~ent)
+{
+  sf_sv_int_add ~ent $EDICT_MOVETYPE
+  sf_sv_mem_read_int ~val $~ent
+  set GLOBAL_movetype #~val
+}
+
+
+function ent_set_solid(~ent)
+{
+  // say "grav?"
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $EDICT_SOLID
+  sf_sv_mem_write_int ~grav $~gclient
+}
+
+
+function player_set_angles(~ent,~pitch,~yaw)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $CLIENT_RESP_ANGLES
+
+  sf_sv_mem_read_float ~cmdangle_pitch $~gclient
+  sf_sv_int_add ~gclient 4
+  sf_sv_mem_read_float ~cmdangle_yaw $~gclient
+
+
+  sp_sc_cvar_math_sub ~pitch $~cmdangle_pitch
+  sp_sc_cvar_math_sub ~yaw $~cmdangle_yaw
+
+  sp_sc_flow_if number cvar LASERS_DEBUG == val 1
+  {
+    ~pitch
+    ~yaw
+  }
+
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $CLIENT_PMOVE_DELTAANGLES
+
+  // float to short
+  // (x)*65536/360
+  sp_sc_cvar_math_mul ~pitch 65536
+  sp_sc_cvar_math_div ~pitch 360
+  sp_sc_cvar_math_mul ~yaw 65536
+  sp_sc_cvar_math_div ~yaw 360
+
+  sf_sv_mem_write_short $~gclient $~pitch
+  sf_sv_int_add ~gclient 2
+  sf_sv_mem_write_short $~gclient $~yaw
+  
+}
+// CLIENT_PMOVE_DELTAANGLES 65536
+function player_set_delta_angles(~ent,~x,~y, ~z)
+{
+  sf_sv_int_add ~ent $EDICT_GCLIENT
+  sf_sv_mem_read_int ~gclient $~ent
+  sf_sv_int_add ~gclient $CLIENT_PMOVE_DELTAANGLES
+
+  sf_sv_mem_write_short $~gclient $~x
+  sf_sv_int_add ~gclient 4
+  sf_sv_mem_write_short $~gclient $~y
+  sf_sv_int_add ~gclient 4
+  sf_sv_mem_write_short $~gclient $~z
+}
+
+//convert to new 
+//its spawn a gate actually
+//should be universal
+function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
+{
+  echo "Trigger spawn ****************************"
+  //sp_sc_cvar_list ~*
+  //spawn a self referencing trigger (a gate)
+  //create->initvars->spawn->setsize
+  //to reduce on clutter, we'll get origin and size in 1 cvar and split here
+  set ~classname "trigger_multiple"
+  set ~model "trigger"
+
+  sp_sc_cvar_split ~loc ":" ~origin
+  sp_sc_cvar_split ~size ":" ~size
+  set ~maxs_1 #~size_1;set ~maxs_2 #~size_2;set ~maxs_3 #~size_3
+  set ~mins_1 #~size_4;set ~mins_2 #~size_5;set ~mins_3 #~size_6
+
+  sf_sv_ent_create ~ent
+  //trigger uid
+  //~uid = "global_tuid_123412414 gate1"
+  set GLOBAL_tuid_$~ent #~tuid
+  set GLOBAL_tuid_$~tuid #~ent
+
+  sf_sv_ent_create ~ent
+  sf_sv_ent_field_set #~ent model #~model
+  sf_sv_ent_field_set #~ent classname #~classname
+  sf_sv_ent_field_set #~ent origin ~loc
+  sf_sv_ent_field_set #~ent targetname #~tuid
+  sf_sv_ent_field_set #~ent target #~tuid
+  sf_sv_ent_spawn #~ent
+  set G_spawn_trigger_ent #~ent
+
+  sf_sv_ent_callback $~ent $~type $~callback
+  sf_sv_ent_field_set $~ent mins ~mins
+  sf_sv_ent_field_set $~ent maxs ~maxs
+  sf_sv_ent_relink $~ent
+
+  //sp_sc_func_exec ent_set_angles $~ent 45 45
+  //sp_sv_trigger_set_size $~tuid $~mins_x $~mins_y $~mins_z $~maxs_x $~maxs_y $~maxs_z
+  //sp_sc_func_exec ent_get_angles $~ent
+  //sp_sc_cvar_list ent_get_?
+
+  sp_sv_info_frames
+  set _sf_sv_bomb_drop_frames #_sp_sv_info_frames
+}
+//sf_sv_sound_play_ent #~sound $G_bomb_ent 1 1 0 0
+function slotSoundPlay(~slot,~sound,~atten,~clbool,~fake)
+{
+  //if we disconnect.. the sound is played on our slot ent that
+  //doesnt exist so nobody hears anything
+  //add a speaker box ent/trigger lol
+  //make sure slots connected
+  sp_sv_info_client $~slot
+  sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+  {
+    sf_sv_player_ent ~ent #~slot
+    sf_sv_sound_play_ent #~sound #~ent 0 1 #~atten #~clbool
+  }
+}
+
+function entSoundPlay(~ent,~sound,~atten,~clbool,~fake)
+{
+  //if we disconnect.. the sound is played on our slot ent that
+  //doesnt exist so nobody hears anything
+
+  //add a speaker box ent/trigger lol
+  //make sure slots connected
+  sf_sv_sound_play_ent #~sound #~ent 0 1 #~atten #~clbool
+}
+
+
+//create a trigger on the c4 for defusing
+function .b(~slot)
+{
+  sp_sc_func_load_file soflus/addons/bombplant.func
+  sp_sc_func_exec spawn_bombplant_area #~slot
+}
+
+function spawn_bombplant_area(~slot)
+{
+  //why are we using player pos, should be ent pos
+  //The c4 bomb becomes a 'trigger'
+  echo "??"
+  sf_sv_player_pos ~xyz $~slot
+  sp_sc_cvar_list ~xyz*
+  set ~x #~xyz_1;set ~y #~xyz_2;set ~z #~xyz_3
+
+  sp_sc_cvar_sset ~origin #~x ":" #~y ":" #~z
+  set G_ts_origin #~origin
+  set ~size "-8:-6:0:8:-6:0";set ~callback "testing123";set ~type "pluse";set ~tuid "21111"
+  sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+}
+
+function distance(*)
+{
+  sf_sv_player_pos ~1 0
+  sf_sv_player_pos ~2 1
+
+  set ~x1 $~1_1;set ~x2 $~2_1
+  set ~y1 $~1_2;set ~y2 $~2_2
+  set ~z1 0;set ~z2 0
+  sp_sc_func_exec return_d $~x1 $~x2
+  set ~1 #G_return_d
+  sp_sc_cvar_list ~1
+  sp_sc_func_exec return_d $~y1 $~y2
+  set ~2 #G_return_d
+  sp_sc_cvar_list ~2
+  sp_sc_func_exec return_d $~z1 $~z2
+  set ~3 #G_return_d
+  sp_sc_cvar_list ~3
+  echo "no squared"
+  sp_sc_cvar_math_mul ~1 $~1
+  sp_sc_cvar_list ~1
+  sp_sc_cvar_math_mul ~2 $~2
+  sp_sc_cvar_list ~2
+  sp_sc_cvar_math_mul ~3 $~3
+  sp_sc_cvar_list ~3
+  add ~1 $~2
+  add ~1 $~3
+  sp_sc_cvar_math_sqrt ~1
+  sset ~msg "answer is:" $~1
+  echo #~msg
+  sset ~cmd sp_sc_func_exec distance 
+  //sp_sc_timer 1000 #~cmd
+
+}
+
+function return_d(~p1, ~p2)
+{
+  set G_return_d 0
+  set ~match 0
+  
+  sp_sc_flow_if number cvar ~p1 < val 0
+  {
+    sp_sc_flow_if number cvar ~p2 < val 0
+    {
+      sp_sc_cvar_math_mul ~p2 -1
+      sp_sc_cvar_math_mul ~p1 -1
+    }
+  }
+  //make sure p1 is the biggest
+  sp_sc_flow_if number cvar ~p2 > cvar ~p1
+  {
+    set ~t1 $~p1
+    set ~p1 $~p2
+    set ~p2 $~t1
+  }
+
+  sp_sc_func_exec check_for_posneg $~p1 $~p2
+  sp_sc_flow_if number cvar G_posneg == val 1
+  {
+    //p1 is + p2 is -
+    sp_sc_cvar_math_mul ~p2 -1
+    add ~p1 $~p2
+    set G_return_d $~p1
+    set ~match 1
+  }
+  sp_sc_func_exec check_for_posneg $~p2 $~p1
+  sp_sc_flow_if number cvar G_posneg == val 1
+  {
+    sp_sc_cvar_math_mul ~p2 -1
+    add ~p1 $~p2
+    set G_return_d $~p1
+    set ~match 1
+  }
+  sp_sc_flow_if number cvar ~match == val 0
+  {
+    add ~p1 -$~p2
+    set G_return_d $~p1
+  }
+}
+
+function check_for_posneg(~p1,~p2)
+{
+  set G_posneg 0
+  sp_sc_flow_if number cvar ~p1 >= val 0
+  {
+    sp_sc_flow_if number cvar ~p2 <= val -1
+    {
+      set G_posneg 1
+    }
+  }
+}
+
+function draw(*)
+{
+  sf_sv_draw_clear
+  set ~x $g_ypos
+  set ~y 1
+  set ~s "lol"
+  sf_sv_draw_string $~x $~y #~s
+  add g_ypos 10
+  sset ~cmd sp_sc_func_exec draw
+  sp_sc_timer 500 #~cmd
+}

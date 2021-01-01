@@ -1,0 +1,1281 @@
+
+//bomb planted
+//but we kill all ct's , bomb still continues
+
+//if all terrorists are dead - then T's view an intermission screen/camera on either A / B if bomb planted
+//else the camera is in another generic place?
+
+//we'll add a delay to plant or defuse attempt times
+
+//some spec cmd isnt silent
+
+//move to spec = move to spec + on die detected
+
+//bombplanted sound weird
+
+//freeze specs on connect , movescale works on them
+
+//stop leaning on plant
+//match ended during plant = cancel
+//weapon swap force buggy
+
+//sf_sv_player_weap_current
+//drop bomb
+//pick up bomb
+//if holding bomb - on death drop bomb on floor
+//10 seconds to defuse bomb
+//5 seconds with defusal kit
+
+//environ_explosion
+//sp_sv_ent_use #ent
+
+//defuse in progress - multiple people defusing
+
+//on +use and defusing bomb
+//increase plant timer by 100
+//sound queue
+
+//bomb trigger olocation messed up 
+//weird behaviour
+
+//start - freeze players for a bit - so we can select our bomb carier - resume
+
+
+//cant swap team while round in play - only in interval
+function bombplant_init()
+{
+
+	sp_sc_on_change G_bomb_defusing_slot defuse_slot_change
+  sp_sc_on_change bp_round_inprogress defuse_inprogress_change
+  sp_sc_on_change G_bomb_planting defuse_planting_change
+  sp_sc_on_change G_bomb_defusing defuse_defusing_change
+
+  sp_sc_on_change G_bomb_slot bslot_change
+	//sf_sv_sound_register "sofree/bombpl.wav"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_disconnect "bombplant_on_die"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_die "bombplant_on_die"
+	//sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_spawn "bp_set_gravity"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_begin "bp_cvars_on_begin"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_spawn "bp_set_gravity"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_map_begin "bombplant_map_begin_new"
+	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_userinfo_change "bombplant_userinfo"
+	//290:700:-4:-90:290:-23
+	//set G_ts_x_max 290
+	//set G_ts_y_max 700
+	//set G_ts_z_max -4
+	//set G_ts_x_min -90
+	//set G_ts_y_min 290
+	//set G_ts_z_min -23
+	set G_ts_max_1 10
+	set G_ts_max_2 10
+	set G_ts_max_3 0
+	set G_ts_min_1 0
+	set G_ts_min_2 0
+	set G_ts_min_3 0
+
+	set G_tuid "defuse"
+	sp_sc_func_exec spf_sc_list_add_func _sf_sv_on_use_press "use_press1"
+	sp_sc_func_exec spf_sc_list_add_func _sf_sv_on_use_release "use_release1"
+	//A dm/dust2002
+	set max_z_2 "138.125000"
+	set max_y_2 "2693.875000"
+	set max_x_2 "1262.625000"
+	set min_z_2 "119"
+	set min_y_2 "2323.875000"
+	set min_x_2 "1036.625000"
+	//a2 (on box)
+	set max_z_3 "190"
+	set max_y_3 "2390.500000"
+	set max_x_3 "1255.125000"
+	set min_z_3 "183"
+	set min_y_3 "2329.500000"
+	set min_x_3 "1193.125000"
+
+	//B dm/dust2002
+
+	set min_x_1 "-1723.625000"
+	set min_y_1 "2485.250000"
+	set min_z_1 "20"
+	set max_x_1 "-1343.625000"
+	set max_y_1 "2895.250000"
+	set max_z_1 "50.125000"
+
+	//bomb offsets
+	//"-4:-3:0:4:3:0"
+  set sf_sv_sound_index_1 "sofree/bombpl.wav"
+  set sf_sv_sound_index_2 "sofree/bombdef.wav"
+  set sf_sv_sound_index_3 "sofree/ctswin.wav"
+  set sf_sv_sound_index_4 "sofree/tswin.wav"
+  set sf_sv_sound_length_1 "1509"
+  set sf_sv_sound_length_2 "1776"
+  set sf_sv_sound_length_3 "2090"
+  set sf_sv_sound_length_4 "1907"
+
+
+}
+function defuse_defusing_change(~val)
+{
+  sp_sc_cvar_copy ~val $~val
+  sp_sc_flow_if number cvar ~val == val 0
+  {
+    sp_sv_info_frames
+    set G_bomb_defuse_frames #_sp_sv_info_frames
+  } 
+}
+function defuse_planting_change(~val)
+{
+  sp_sc_cvar_copy ~val $~val
+  sp_sc_flow_if number cvar ~val == val 0
+  {
+    sp_sv_info_frames
+    set G_bomb_plant_frames #_sp_sv_info_frames
+  }   
+}
+function bslot_change(~val)
+{
+  sp_sc_cvar_copy ~val $~val
+  sset ~cmd "bomb slot changed to" $~val
+  say #~cmd
+}
+function defuse_inprogress_change(~val)
+{
+  sp_sc_cvar_copy ~val $~val
+  sp_sc_flow_if number cvar ~val == val 0
+  {
+    //round has finished.
+    //swap all slots who made a request
+    set ~counter 0
+    sp_sc_flow_while number cvar ~counter < val #maxclients
+    {
+      sp_sc_cvar_copy ~swap bp_swap_request_$~counter
+      sp_sc_flow_if number cvar ~swap == val 1
+      {
+        sp_sv_client_swap $~counter
+        set bp_swap_request_$~counter 0
+      }
+      add ~counter 1
+    }
+  }
+  else
+  {
+    say "freeze dagame"
+    //round just started
+    set g_movescale 0
+    sp_sc_func_exec bp_attack_on_off 0
+    sp_sc_timer 10000 "set g_movescale 1;sp_sc_func_exec bp_attack_on_off 1"
+  }
+}
+function bp_attack_on_off(~val)
+{
+  sset ~cmd "attack set to" $~val
+  say #~cmd
+  set ~counter 0
+  sp_sc_flow_while number cvar ~counter < val #maxclients
+  {
+    sp_sv_info_client $~counter
+    sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+    {
+      sf_sv_player_allow_attack $~counter $~val
+      sf_sv_player_allow_altattack $~counter $~val
+    }
+    add ~counter 1
+  }
+  
+}
+function defuse_slot_change(~val)
+{
+	sp_sc_cvar_copy ~val $~val
+	sset ~msg "defusing slot now = " $~val
+	say $~msg
+}
+function bp_cvars_on_begin(~slot)
+{
+	zero _sp_sv_info_client_ip
+	sp_sv_info_client $~slot
+	sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+	{
+		set bp_round_team_$~slot $_sp_sv_info_client_team
+    set bp_swap_request_$~slot 0
+	}
+}
+function bombplant_userinfo(~slot)
+{
+  //when going to spectator - you 'die' also so checks here not needed
+  say "userinfo"
+  zero _sp_sv_info_client_ip
+  zero _sp_sv_info_client_spectator
+  zero _sp_sv_info_client_team
+  sp_sv_info_client $~slot
+  sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+  {
+    sp_sc_flow_if number cvar _sp_sv_info_client_spectator == val 1
+    {
+      //we're connected + bomb slot
+      //change password for security?
+      sp_sc_flow_if number cvar ~slot == val #G_bomb_slot
+      {
+        //we moved to spec
+        //drop bomb last known location
+        say "we moved to spec"
+        set ~x $G_bomb_slot_xyz_1
+        set ~y $G_bomb_slot_xyz_2
+        set ~z $G_bomb_slot_xyz_3
+        sp_sc_func_exec ondie_drop_bomb $~x $~y $~z 
+        //cancel plant if we're planting
+        sp_sc_flow_if number cvar G_bomb_planting_slot == val $~slot
+        {
+          sp_sc_func_exec cancel_plant
+        }
+      }
+      sp_sc_flow_if number cvar ~slot == val #G_bomb_defusing_slot
+      {
+        sp_sc_func_exec cancel_defuse
+      }
+    }
+    else
+    {
+      sp_sc_flow_if number cvar bp_round_inprogress == val 1
+      {
+        //say "in progress = 1"
+        sp_sc_cvar_copy ~team bp_round_team_$~slot 
+        sp_sc_flow_if number cvar _sp_sv_info_client_team != cvar ~team
+        {
+          //client made a request to swap teams next round
+          sp_sv_client_swap $~slot
+          say "swap request made"
+          set bp_swap_request_$~slot 1
+        }
+      }
+    }
+  }
+}
+function bp_set_gravity(*)
+{
+	sf_sv_player_gravity $~1 800
+  say "client just spawned"
+}
+function move_to_bomb(*)
+{
+	sf_sv_vector_set ~loc "1262" "2400" "200" 
+	sf_sv_player_move $~1 ~loc
+}
+
+function bombplant_map_begin_new()
+{
+	set bp_round_inprogress 0
+	sf_sv_sound_register "sofree/bombpl.wav"
+	sf_sv_sound_register "sofree/bombdef.wav"
+	sf_sv_sound_register "sofree/c4_disarm.wav"
+	sf_sv_sound_register "sofree/c4_draw.wav"
+	sf_sv_sound_register "sofree/ctswin.wav"
+	sf_sv_sound_register "sofree/tswin.wav"
+	sf_sv_sound_register "weapons/goggles/on.wav"
+  sf_sv_sound_register "weapons/c4/beep.wav"
+	sf_sv_sound_register "weapons/goggles/off.wav"
+	sf_sv_sound_register "sofree/c4_beep1.wav"
+	sf_sv_sound_register "sofree/c4_plant.wav"
+	set _sf_sv_debug_triggers 1
+}
+
+function bombplant_round_begin()
+{
+	//graceful bomb defusal if planted on map end
+	sp_sc_cvar_list G_bomb_planted
+	sp_sc_flow_if number cvar G_bomb_planted == val 1
+	{
+		echo "bomb is planted"
+		sp_sc_func_exec defuse_the_bomb
+	}
+	set G_bomb_exploded 0
+	set G_bomb_planting 0
+	set G_bomb_defusing_slot -1
+	set G_bomb_planting_slot -1
+	set G_bomb_defused 0
+	set G_bomb_slot -1
+	set G_bomb_planted 0
+	set G_bomb_defusing 0
+	sp_sc_func_exec bp_remove_trash
+	set G_bomb_ent ""
+	set G_bomb_plant_timer "0"
+	set G_bomb_defuse_timer "0"
+  set G_bomb_plant_frames "0"
+  set G_bomb_defuse_frames "0"
+	set ~slot 0
+
+	//sp_sc_func_exec draw_site_triggers
+}
+
+function bombplant_give_bomb(~slot)
+{
+	set G_bomb_slot $~slot
+}
+
+//bomb holder on disconnect
+//if he dies
+//if he goes to spec
+//drop bomb - in a safe place??
+//loop every seconds for bomb carriers coordinates 
+//if he's gone -without 'on die' then spawn bomb on last known coords
+function bombplant_on_disconnect(*)
+{
+	sp_sc_flow_if number cvar G_bomb_planted == val 0
+	{
+		sp_sc_flow_if number cvar ~1 == cvar G_bomb_slot
+		{
+			sp_sc_flow_if number cvar G_bomb_planting == val 1
+			{
+				//disconnected during bomb plant
+				sp_sc_func_exec cancel_plant
+			}
+      say "disconnected"
+			set ~x $G_bomb_slot_xyz_1
+			set ~y $G_bomb_slot_xyz_2
+			set ~z $G_bomb_slot_xyz_3
+			sp_sc_func_exec ondie_drop_bomb $~x $~y $~z
+		}
+	}
+}
+
+
+function bombplant_on_die(*)
+{
+	echo "on die bomb"
+	//killer -99 suicide
+	set ~victim #~1
+	set ~killer #~2
+	set ~mod #~3
+	sp_sc_cvar_list ~v* ~k* 
+	sp_sc_flow_if number cvar G_bomb_planted == val 0
+	{
+		sp_sc_flow_if number cvar ~victim == cvar G_bomb_slot
+		{
+			say "Bomb carrier just died!!"
+			set ~x $G_bomb_slot_xyz_1
+      set ~y $G_bomb_slot_xyz_2
+      set ~z $G_bomb_slot_xyz_3
+			sp_sc_func_exec ondie_drop_bomb $~x $~y $~z
+		}
+	}
+	sp_sc_flow_if number cvar ~victim == cvar G_bomb_defusing_slot
+	{
+		sp_sc_func_exec cancel_defuse $~victim
+		echo "~killer just killed someone defusing" 
+	}
+}
+
+
+function ondie_drop_bomb(~x,~y,~z)
+{
+  sp_sv_info_client $G_bomb_slot
+  sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+  {
+    echo "do stuff with coords"
+    say "spawn a bomb"
+    set G_bomb_slot -1
+    sset ~origin $~x ":" $~y ":" $~z
+    set ~size "-8:-6:-10:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
+    sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+    sp_sc_func_exec spawn_a_bomb $~x $~y $~z
+  }
+}
+
+
+function use_press1(*)
+{
+	//echo "lol"
+	echo "press"
+	sp_sv_info_client #~1
+	//sp_sc_cvar_list _sp_sv_info_client_team 
+	sp_sc_flow_if number cvar _sp_sv_info_client_team == val 1
+	{
+		//do we need this cus c4 is its own trigger
+		echo "defuse check"
+		sp_sc_func_exec ts_defuse_check #~1
+	}
+	else
+	{
+		echo "plant check"
+		sp_sc_func_exec ts_plant_check #~1
+	}
+	
+}
+
+//fix nu 
+function use_release1(*)
+{
+	//say "release"
+	//????????????????????? lol
+	//debugging
+	sp_sc_flow_if number cvar ~1 == cvar G_bomb_slot
+	{
+		//say "we're bomb slot "
+		sp_sc_flow_if number cvar G_bomb_planting == val 1
+		{
+			echo "cancel plant"
+			sp_sc_func_exec cancel_plant
+		}
+	}
+	else
+	{
+		//say "we're not bomb slot"
+		sp_sc_flow_if number cvar G_bomb_defusing_slot == cvar ~1
+		{
+			//say "cancel"
+			sp_sc_func_exec cancel_defuse $~1
+		}
+		else
+		{
+			//say "we're not defusing"
+		}
+	}
+}
+
+
+function draw_site_triggers()
+{
+	//function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
+	//A2
+	set ~callback "testing123"
+	set ~type "pluse"
+	set ~size "24:43:-14:-38:-18:-23"
+	set ~origin "1231.125000:2347.500000:184.125000"
+	//sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+	//a 
+	set ~origin "-1633.625000:2195.250000:24.125000"
+	set ~size "290:700:-4:-90:290:-23"
+	sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+	//B
+	set size~ "240:370:-44:14:0:-50"
+	set ~origin "21022.625000:2323.875000:152.125000"
+	sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+
+}
+
+
+//killed during plant must be handled
+function on_plant_NEW(~slot)
+{
+	set G_bomb_planting 1
+	set G_bomb_planting_slot $~slot
+	//freeze the player
+	sp_sc_func_exec freeze_player #~slot 1
+	//begin plant sound sequence
+	set ~sound "sofree/c4_draw.wav"
+	sp_sc_func_exec slotSoundPlay #G_bomb_slot #~sound 1 0 1
+	sp_sc_func_exec plant_sound_sequence 400
+	sp_sc_func_exec check_is_plant_complete_NEW
+}
+
+function check_is_plant_complete_NEW()
+{
+	sp_sc_flow_if number cvar G_bomb_planting == val 1
+	{
+		sp_sc_flow_if number cvar G_bomb_plant_timer == val 3500
+		{
+			echo "Plant it and unfreeze"
+			sp_sc_func_exec cancel_plant
+			sp_sc_func_exec plant_the_bomb
+		}
+		else
+		{
+			add G_bomb_plant_timer 500 
+			sset ~cmd sp_sc_func_exec check_is_plant_complete_NEW
+			sp_sc_timer 500 #~cmd
+		}
+	}
+	else
+	{
+		echo "where not planting anymore!"
+	}
+}
+
+
+function plant_sound_sequence(~total)
+{
+	//we have a quick beep in the sequence
+	sp_sc_flow_if number cvar ~total <= val 2600
+	{
+		sp_sc_flow_if number cvar ~total == val 1200
+		{
+			set ~delay 200
+		}
+		else
+		{
+			set ~delay 400
+		}
+		sp_sc_flow_if number cvar G_bomb_planting == val 1
+		{
+			~total
+			add ~total $~delay
+			sset ~cmd sp_sc_func_exec plant_beep_seq
+			sp_sc_timer $~delay #~cmd
+			sset ~cmd sp_sc_func_exec plant_sound_sequence $~total
+			sp_sc_timer $~delay #~cmd
+		}
+	}
+}
+function plant_beep_seq()
+{
+	//dont play the beeps if we cancel the plant
+	sp_sc_flow_if number cvar G_bomb_planting == val 1
+	{
+		set ~sound "weapons/c4/beep.wav"
+		sp_sc_func_exec slotSoundPlay $G_bomb_slot #~sound 1 0 1
+	}
+}
+function on_defuse(~slot)
+{ 
+	//set to the slot who is defusing
+	set G_bomb_defusing_slot $~slot
+	//defuse in progress
+	set G_bomb_defusing 1
+	set ~sound "sofree/c4_disarm.wav"
+	sp_sc_func_exec slotSoundPlay $G_bomb_defusing_slot #~sound 1 0 1 
+	//freeze the player
+	sp_sc_func_exec freeze_player #~slot 1
+	sp_sc_func_exec is_defuse_complete $~slot 
+}
+
+//multiple people  can defuse
+function is_defuse_complete(~slot)
+{ 
+	//defuse time 5000 will be 'slot_def time' because people can buy kits
+	sp_sc_flow_if number cvar G_bomb_defusing == val 1
+	{
+		//time can change if client has defuse kit
+		sp_sc_cvar_list G_bomb_defuse_timer
+		sp_sc_flow_if number cvar G_bomb_defuse_timer == val 5000
+		{
+			sp_sc_func_exec defuse_the_bomb
+			//unfreeze him
+			sp_sc_func_exec cancel_defuse #~slot
+		}
+		else
+		{
+			add G_bomb_defuse_timer 500 
+			sset ~cmd sp_sc_func_exec is_defuse_complete $~slot
+			sp_sc_timer 500 #~cmd
+		}
+	}
+}
+
+function cancel_defuse(~slot)
+{
+	//say "cancel"
+  sp_sv_info_frames
+  set G_bomb_defuse_frames #_sp_sv_info_frames
+	sp_sc_func_exec freeze_player #~slot 0
+	//sf_sv_player_weap_lock $~slot 0
+	//sset ~cmd sf_sv_player_weap_switch $~slot 8
+	//sp_sc_timer 600 #~cmd
+	//-1 means nobody is defusing anymore
+	set G_bomb_defusing 0
+	set G_bomb_defuse_timer 0
+	set G_bomb_defusing_slot -1
+}
+
+function cancel_plant()
+{
+	//planting to 0 will cancel the sound sequence
+	set G_bomb_planting 0
+	set G_bomb_plant_timer 0
+	set G_bomb_planting_slot -1
+	//unfreeze him
+	sp_sc_func_exec freeze_player #G_bomb_slot 0
+}
+
+
+function freeze_player(~slot,~val)
+{
+  sset ~cmd "freeze player" $~slot ":" $~val
+  say #~cmd
+  zero _sp_sv_info_client_ip
+  sp_sv_info_client $~slot
+  sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+  {
+    sp_sc_flow_if number cvar ~val == val 1
+    {
+      echo "freezx"
+      sf_sv_player_weap_current ~gun $~slot
+      set G_current_weap_$~slot $~gun
+      sf_sv_player_allow_attack $~slot 0
+      sf_sv_player_allow_altattack $~slot 0
+
+      sf_sv_player_ent ~ent #~slot
+      sf_sv_ent_field_set #~ent movescale 1
+      set ~vel_1 "0";set ~vel_2 "0";set ~vel_3 "0"
+      sf_sv_ent_field_set #~ent velocity ~vel
+      sf_sv_player_gravity $~slot 9999
+    }
+    else
+    {
+      echo "unfreez"
+      sf_sv_player_allow_attack $~slot 1
+      sf_sv_player_allow_altattack $~slot 1
+      sf_sv_player_ent ~ent #~slot
+      sf_sv_ent_field_set #~ent movescale 0
+      //echo #~mov
+      sf_sv_player_gravity $~slot 800
+    }
+  }
+}
+
+
+function ts_defuse_check(~slot)
+{
+	//if bomb trigger is spawned and pressed its planted right?
+	sp_sc_flow_if number cvar G_bomb_planted == val 1
+	{
+		sp_sc_flow_if number cvar G_bomb_defused != val 1
+		{
+			sp_sc_flow_if number cvar G_bomb_defusing == val 0
+			{
+				//Do we have Bomb yes/no - no - dont bother checking
+				set ~match 0
+				sf_sv_player_pos ~xyz #~slot
+				set ~x #~xyz_1
+				set ~y #~xyz_2
+				set ~z #~xyz_3
+				//sp_sc_cvar_list ~x ~y ~z
+				set ~counter 1
+				//sp_sc_cvar_list ~counter
+				sp_sc_cvar_copy ~min_x min_b_x
+				sp_sc_cvar_copy ~max_x max_b_x
+				sp_sc_cvar_copy ~min_y min_b_y
+				sp_sc_cvar_copy ~max_y max_b_y
+				sp_sc_cvar_copy ~min_z min_b_z
+				sp_sc_cvar_copy ~max_z max_b_z
+				sp_sc_flow_if number cvar ~x >= val #~min_x
+				{
+				sp_sc_flow_if number cvar ~x <= val #~max_x
+				{
+				 sp_sc_flow_if number cvar ~y >= val #~min_y
+				 {
+					sp_sc_flow_if number cvar ~y <= val #~max_y
+					{
+					 sp_sc_flow_if number cvar ~z >= val #~min_z
+					 {
+						sp_sc_flow_if number cvar ~z <= val #~max_z
+						{
+						 set ~match 1
+						}
+					 }
+					}
+				 }
+				}
+				}
+				sp_sc_flow_if number cvar ~match == val 0
+				{
+					echo "not near the bomb"
+				}
+				else
+				{
+					sp_sc_flow_if number cvar G_bomb_exploded != val 1
+					{
+            sp_sv_info_frames
+            set ~now #_sp_sv_info_frames
+            add ~now -$G_bomb_defuse_frames
+            sp_sc_flow_if number cvar ~now > val 5
+            {
+              sp_sc_func_exec on_defuse #~slot
+            }
+						
+					}
+					else
+					{
+						echo "you cant defuse an exploded bomb"
+					}
+				}
+			}
+			else
+			{
+				echo "someone is defusing the bomb"
+			}
+		}
+		else
+		{
+			echo "the bomb is already defused lol"
+		}
+	}
+	else
+	{
+		echo "bomb isnt planted bro"
+	}
+}
+
+function ts_plant_check(~slot)
+{
+	echo "@ plant check"
+	//for debugging
+	//sp_sc_flow_if number cvar G_bomb_slot == cvar ~slot
+	//-1 means its dropped on the floor somewhere
+  sp_sc_flow_if number cvar G_bomb_planting != val 1
+  {
+    sp_sc_flow_if number cvar G_bomb_slot == val $~slot
+    {
+      sp_sc_flow_if number cvar G_bomb_planted == val 0
+      {
+       echo "G_bomb_planted == 0"
+       //Do we have Bomb yes/no - no - dont bother checking
+       set ~match 0
+       sf_sv_player_pos ~xyz #~slot
+       set ~x #~xyz_1
+       set ~y #~xyz_2
+       set ~z #~xyz_3
+       //sp_sc_cvar_list ~x ~y ~z
+       set ~counter 1
+       sp_sc_flow_while number cvar ~counter <= val 3
+       {
+          sp_sc_cvar_list ~counter
+          sp_sc_cvar_copy ~min_x min_x_$~counter
+          sp_sc_cvar_copy ~max_x max_x_$~counter
+          sp_sc_cvar_copy ~min_y min_y_$~counter
+          sp_sc_cvar_copy ~max_y max_y_$~counter
+          sp_sc_cvar_copy ~min_z min_z_$~counter
+          sp_sc_cvar_copy ~max_z max_z_$~counter
+
+
+          sp_sc_flow_if number cvar ~x >= val #~min_x
+          {
+          sp_sc_flow_if number cvar ~x <= val #~max_x
+          {
+           sp_sc_flow_if number cvar ~y >= val #~min_y
+           {
+            sp_sc_flow_if number cvar ~y <= val #~max_y
+            {
+             sp_sc_flow_if number cvar ~z >= val #~min_z
+             {
+              sp_sc_flow_if number cvar ~z <= val #~max_z
+              {
+               set ~match 1
+               set ~counter 3
+              }
+             }
+            }
+           }
+          }
+         }
+         add ~counter 1
+        }
+        sp_sc_cvar_list ~counter
+        sp_sc_flow_if number cvar ~match == val 0
+        {
+          //wrong area
+          echo "wrong area"
+        }
+        else
+        {
+          echo "go to on_plant_NEW"
+          //Check time since last plant cancel
+          sp_sv_info_frames 
+          set ~now #_sp_sv_info_frames
+          add ~now -$G_bomb_plant_frames
+          sp_sc_flow_if number cvar ~now >= val 5
+          {
+            set G_bomb_plant_frames #_sp_sv_info_frames
+            sp_sc_func_exec on_plant_NEW #~slot
+          }
+          else
+          {
+            say "too soon"
+          }
+          
+        }
+      }
+      else
+      {
+        echo "bomb is already planted bro"
+      }
+    }
+    else
+    {
+      echo "We're not G_bomb_slot"
+    }
+  }
+}
+
+function .p_x(~slot,~val)
+{
+	add G_ts_max_1 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+function .p_y(~slot, ~val)
+{
+	add G_ts_max_2 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+function .p_z(~slot,~val)
+{
+	add G_ts_max_3 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+
+function .m_x(~slot,~val)
+{
+	add G_ts_min_1 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+function .m_y(~slot,~val)
+{
+	add G_ts_min_2 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+function .m_z(~slot,~val)
+{
+	add G_ts_min_3 $~val
+	sp_sv_trigger_set_size $G_tuid G_ts_max G_ts_min
+}
+
+function .ts_dende(*)
+{
+	sp_sc_cvar_sset ~size "Size: " $G_ts_x_max ":" $G_ts_y_max ":" $G_ts_z_max ":" $G_ts_x_min ":" $G_ts_y_min ":" $G_ts_z_min
+	sp_sv_print_client #~1 #~size
+	sp_sc_cvar_sset ~msg "Origin: " #G_ts_origin
+	sp_sv_print_client #~1 #~msg
+
+	//get actual coordinates
+	sp_sc_cvar_split ~xyz ":" G_ts_origin
+	set ~x #~xyz_1;set ~y #~xyz_2; set ~z #~xyz_3
+	sp_sc_cvar_list ~x ~y ~z
+	add ~x $G_ts_x_max
+	add ~y $G_ts_y_max
+	add ~z $G_ts_z_max
+	echo "Max"
+	sp_sc_cvar_list ~x ~y ~z 
+	add ~z 30
+	add ~xyz_1 $G_ts_x_min
+	sp_sc_cvar_list G_ts_y_min ~xyz_2
+	add ~xyz_2 $G_ts_y_min
+	add ~xyz_3 $G_ts_z_min
+	add ~xyz_3 30
+	echo "MIN"
+	sp_sc_cvar_list ~xyz_?
+	sp_sc_cvar_sset min_x_2 #~xyz_1
+	sp_sc_cvar_sset min_y_2 #~xyz_2
+	sp_sc_cvar_sset min_z_2 #~xyz_3
+	sp_sc_cvar_sset max_x_2 #~x
+	sp_sc_cvar_sset max_y_2 #~y
+	sp_sc_cvar_sset max_z_2 #~z
+
+	sp_sc_cvar_list min_?_2 max_?_2
+	echo "No listing??"
+	echo "WHY NOT>???"
+
+}
+
+
+
+
+function why_lol(*)
+{
+	echo "sure"
+}
+function plant_the_bomb()
+{
+	//we need player pos here only.
+	sf_sv_player_pos ~xyz $G_bomb_slot
+	sp_sc_func_exec spawn_a_bomb #~xyz_1 #~xyz_2 #~xyz_3
+	set G_bomb_planted 1
+
+	set ~c4plant "sofree/c4_plant.wav" //-------------------------------------------------
+
+	//set ~sound "sofree/bombpl.wav"
+	//sp_sc_func_exec entSoundPlay #G_bomb_ent #~sound 0 0 1 
+
+  sp_sc_func_exec entSoundPlay #G_bomb_ent #~c4plant 1 0 1
+	sset ~cmd sp_sc_func_exec sf_sv_play_sound_all 1 ";" sp_sc_func_exec begin_beep
+	sp_sc_timer 500 #~cmd
+	//slot no longer has bomb
+	set G_bomb_slot -1
+}
+
+
+function begin_beep()
+{
+  set beep_delay 1000
+  set beep_counter 0
+  set bomb_timer 0
+  set bomb_tot_explode 40000
+  sp_sc_func_exec explode_timer
+  sp_sc_func_exec c4_beep_loop
+}
+
+//beeps = multiple exec per second. bomb timer check 1 per second
+function explode_timer()
+{
+  sp_sc_flow_if number cvar G_bomb_defused != val 1
+  {
+    sp_sc_cvar_list bomb_timer bomb_tot_explode
+    sp_sc_flow_if number cvar bomb_timer == val $bomb_tot_explode
+    {
+      //time to explode
+      set ~sound "weapons/goggles/off.wav"
+      sf_sv_sound_play_ent #~sound $G_bomb_ent 1 1 1 0
+      set ~sound "weapons/goggles/on.wav"
+      sset ~cmd sf_sv_sound_play_ent #~sound $G_bomb_ent 1 1 1 0
+      sp_sc_timer 1000 #~cmd
+      sp_sc_timer 5000 "sp_sc_func_exec bomb_explode"
+    }
+    else
+    {
+      add bomb_timer 1000
+      sset ~cmd sp_sc_func_exec explode_timer
+      sp_sc_timer 1000 #~cmd
+    }
+  }
+  sp_sc_flow_if number cvar beep_counter == val 4
+  {
+    set beep_counter 0
+    add beep_delay -100
+    sp_sc_flow_if number cvar beep_delay <= val 0
+    {
+      set beep_delay 100
+    }
+  }
+  else
+  {
+    add beep_counter 1
+  }
+}
+
+//c4 flash is a one time exec
+//handles beep also
+
+function c4_beep_loop()
+{
+  say "loop"
+  sp_sc_cvar_list G_bomb_defused G_bomb_exploded beep_delay
+  sp_sc_flow_if number cvar G_bomb_defused == val 0
+  {
+    sp_sc_flow_if number cvar G_bomb_exploded == val 0
+    {
+      sp_sc_func_exec c4_flash 1
+      sset ~cmd sp_sc_func_exec c4_beep_loop
+      sp_sc_timer $beep_delay #~cmd
+    }
+    else
+    {
+      say "Bomb is exploded"
+    }
+  }
+  else
+  {
+    say "bombs defused"
+  }
+  say "what"
+}
+
+function c4_flash(~state)
+{
+  say "c4 flash"
+  set ~restart 1
+  set ~loop 3
+  set ~match 0
+  set ~reverse 0
+  
+  sp_sc_flow_if number cvar ~state == val 1
+  {
+    say "1"
+    set ~startpos 0.0
+    set ~state 0
+    sset ~cmd sp_sc_func_exec c4_flash $~state
+    sp_sc_timer 100 #~cmd
+  }
+  else
+  {
+    say "beep"
+    sf_sv_sound_play_ent "weapons/c4/beep.wav" $G_bomb_ent 0 1 1 0
+    set ~startpos 0.2
+    set ~state 1
+    
+  }
+  sf_sv_ent_anim $G_bomb_ent "ghoul/items/projectiles/c4.ghl" $~startpos $~restart $~loop $~match $~reverse
+}
+
+function .boop(*)
+{
+  sf_sv_sound_play_ent "weapons/c4/beep.wav" $G_bomb_ent 0 1 1 0
+}
+function spawn_a_bomb(~x, ~y, ~z)
+{
+	add ~z 20
+	sf_sv_vector_set ~loc $~x $~y $~z
+	echo "spawn a bomb"
+	sp_sc_cvar_list ~*
+	//corpse, beeping,flashing
+	//set ~classname "misc_bosnia_landmine"
+	set ~classname "misc_generic_wpn_c4"
+	set ~model "misc_generic_wpn_c4"
+
+	sf_sv_ent_create ~ent
+	sf_sv_ent_field_set #~ent model #~model
+	sf_sv_ent_field_set #~ent classname #~classname
+	sf_sv_ent_field_set #~ent origin ~loc
+	sf_sv_ent_field_set #~ent targetname "bomb"
+	sf_sv_ent_field_set #~ent target "bomb"
+	
+	
+	
+	
+	echo "try and spawn the bomb?"
+	sf_sv_ent_spawn #~ent
+	set G_bomb_ent #~ent
+	sf_sv_ent_field_set #~ent solid 0
+	sf_sv_ent_field_set #~ent clipmask 1
+	sf_sv_ent_field_set #~ent movetype 11
+	sf_sv_vector_set ~ang -90 0 0
+	sf_sv_ent_field_set #~ent angles ~ang
+	//sf_sv_ent_field_set #~ent gravity 10
+	echo "crash?"
+	
+	//relative to the player would be better
+	//sp_sc_func_exec ent_set_angles #~ent 45 0
+	//sp_sc_func_exec ent_set_velocity $~ent 100 0 0
+	//so we can visualize the box
+	sp_sc_timer 500 "sp_sc_func_exec defuse_trigger_on_bomb"
+}
+
+function .spawnit(*)
+{
+	sf_sv_player_pos ~xyz #~1
+	sp_sc_func_exec spawn_a_bomb #~xyz_1 #~xyz_2 #~xyz_3
+}
+//
+ //-28.689480 : [1] misc_generic_wpn_c4 
+
+//after 500ms, (we hope c4 has hit the ground(???) and use loc for trigger)
+function defuse_trigger_on_bomb()
+{
+	echo "defuse on triggera"
+	sf_sv_ent_field_get ~loc $G_bomb_ent origin
+
+	//set G_ts_b_origin #~origin
+	sset ~origin $~loc_1 ":" $~loc_2 ":" $~loc_3
+	set ~size "-8:-6:-10:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
+	sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+
+	//create a bounding box for coord checks , the 'trigger' is only for seeing the area with debug
+	add ~loc_1 -8
+	set min_b_x $~loc_1
+	add ~loc_2 -6
+	set min_b_y $~loc_2
+	add ~loc_3 -10
+	set min_b_z $~loc_3
+	add ~loc_1 16 
+	set max_b_x $~loc_1
+	add ~loc_2 12
+	set max_b_y $~loc_2
+	add ~loc_3 31
+	set max_b_z $~loc_3
+}
+
+function bombplant_pickup_bomb(*)
+{
+  sp_sc_func_exec ent_get_skinnum #~2
+  set ~slot #GLOBAL_skinnum
+  //sp_sc_cvar_list ~*
+	sp_sc_flow_if number cvar G_bomb_planted == val 0
+	{
+		//say "bomb isnt planted"
+		zero _sp_sv_info_client_ip
+		sp_sv_info_client #~slot 
+		sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""                       
+		{
+      sp_sc_flow_if number cvar _sp_sv_info_client_team == val 2
+      {
+        set ~dropframes #_sf_sv_bomb_drop_frames
+        sp_sv_info_frames
+        set ~now #_sp_sv_info_frames
+        add ~now -$~dropframes
+        //sset ~cmd "drop to pick up time:" $~now
+        //say #~cmd
+        sp_sc_flow_if number cvar ~now > val 5
+        {
+          //T touched the bomb
+          say "we picked the bomb up again"
+          sp_sc_func_exec bp_remove_trash
+          set G_bomb_ent ""
+          set G_bomb_slot #~slot
+        } 
+      }
+		}             
+
+	}
+	else
+	{
+		//if we're ct + planted - print a hint to def+use??
+    say "we're planted"
+	}
+	
+}
+function defuse_the_bomb(*)
+{
+	echo "bomb was defused lol"
+	//sf_sv_player_pos ~xyz $G_bomb_defusing
+	set G_bomb_defused 1
+
+	//sp_sc_func_exec bp_win_ct
+}
+
+function bomb_explode()
+{
+	sp_sc_flow_if number cvar G_bomb_defused != val 1
+	{
+		set G_bomb_exploded 1
+    set G_bomb_planted 0
+		set G_bomb_plant_timer 0
+		//corpse, beeping,flashing
+		//set ~classname "misc_bosnia_landmine"
+		set ~classname "environ_explosion"
+		set ~model "environ_explosion"
+		sp_sc_cvar_list ~*
+		sf_sv_player_pos ~ok $~1
+		set ~x #~ok_1;set ~y #~ok_2; set ~z #~ok_3
+		sf_sv_vector_set ~loc $~x $~y $~z
+		add ~z 20
+		sf_sv_ent_create ~ent
+		sf_sv_ent_field_set #~ent model #~model
+		sf_sv_ent_field_set #~ent classname #~classname
+		sf_sv_ent_field_set #~ent origin ~loc
+		sf_sv_ent_field_set #~ent targetname "bomb"
+		sf_sv_ent_field_set #~ent target "bomb"
+		//sf_sv_ent_spawn #~ent
+		//sf_sv_ent_use #~ent
+		//sp_sc_func_exec ct_lost
+	}
+}
+
+
+
+function .beep(*)
+{
+	sp_sc_func_exec begin_beep
+}
+
+
+
+function .exp(*)
+{
+	//corpse, beeping,flashing
+	//set ~classname "misc_bosnia_landmine"
+	set ~classname "environ_explosion"
+	set ~model "environ_explosion"
+	sp_sc_cvar_list ~*
+	sf_sv_player_pos ~ok $~1
+	set ~x #~ok_1;set ~y #~ok_2; set ~z #~ok_3
+	sf_sv_vector_set ~loc $~x $~y $~z
+	add ~z 20
+	sf_sv_ent_create ~ent
+	sf_sv_ent_field_set #~ent model #~model
+	sf_sv_ent_field_set #~ent classname #~classname
+	sf_sv_ent_field_set #~ent origin ~loc
+	sf_sv_ent_field_set #~ent targetname "bomb"
+	sf_sv_ent_field_set #~ent target "bomb"
+	sf_sv_ent_spawn #~ent
+	sf_sv_ent_use #~ent
+}
+
+function .c4trig(*)
+{
+	//corpse, beeping,flashing
+	//set ~classname "misc_bosnia_landmine"
+	set ~classname "trigger_multiple"
+	set ~model "misc_generic_wpn_c4"
+
+	sf_sv_player_pos ~loc $~1
+	sf_sv_ent_create ~ent
+	sf_sv_ent_field_set #~ent model #~model
+	sf_sv_ent_field_set #~ent classname #~classname
+	sf_sv_ent_field_set #~ent origin ~loc
+	sf_sv_ent_field_set #~ent targetname "unique2"
+	sf_sv_ent_field_set #~ent target "unique2"
+	sf_sv_vector_set ~mins 0 0 0
+	sf_sv_vector_set ~maxs 10 10 10
+	
+	sf_sv_ent_spawn #~ent
+	sf_sv_ent_callback #~ent "pluse" "c4phonehome"
+	sf_sv_ent_field_set #~ent mins ~mins
+	sf_sv_ent_field_set #~ent maxs ~maxs
+	sf_sv_ent_field_set #~ent solid 1
+	sf_sv_ent_field_set #~ent clipmask 1
+	//movetype?? 0 = shit 11 i push it like a ball lo
+	sf_sv_ent_field_set #~ent movetype 11
+
+
+}
+
+function c4phonehome(*)
+{
+	sp_sc_cvar_list ~*
+	echo "plused"
+}
+
+function dende_test(*)
+{
+	sp_sc_cvar_list ~*
+}
+
+function .dance(*)
+{
+	sp_sc_cvar_list ~*
+	sf_sv_player_ent ~me $~1
+	sf_sv_ent_anim $~me "ghoul/enemy/meso/cch_ehawkcrouch_n_a_n.ghl" 0 0 0 0
+}
+
+
+
+ function defuse_attempt(*)
+ {
+		echo "ok"
+ }
+
+
+function bp_remove_trash()
+{
+  //Nug Buddy lol
+  sf_sv_ent_find ~bomb 452 bomb 
+  set ~counter 1
+  sp_sc_flow_while number cvar ~counter <= cvar ~bomb_0
+  {
+    sp_sc_cvar_copy ~ent ~bomb_$~counter
+    sf_sv_ent_remove #~ent
+    add ~counter 1
+  }
+  sf_sv_ent_find ~bomb 452 bombt
+  set ~counter 1
+  sp_sc_flow_while number cvar ~counter <= cvar ~bomb_0
+  {
+    sp_sc_cvar_copy ~ent ~bomb_$~counter
+    sf_sv_ent_remove #~ent
+    add ~counter 1
+  }
+  sf_sv_ent_find ~trash 436 "Nug Buddy"
+  set ~counter 1
+  sp_sc_flow_while number cvar ~counter <= cvar ~trash_0
+  {
+    sp_sc_cvar_copy ~ent ~trash_$~counter
+    sf_sv_ent_remove #~ent
+    add ~counter 1
+  }
+  set G_bomb_ent ""
+}
+
+
+//lol a spectator on your shoulder crashes also?lol
+
+function .view(*)
+{
+  sf_sv_player_ent ~me #~1
+  sf_sv_ent_field_get ~ok $~me viewangles 
+  sp_sc_cvar_list ~ok_?
+  sp_sc_timer 100 "sp_sc_func_exec .view"
+}
+
+function set_player_angle(~who,~desired) {
+  sp_sv_field_get ~resp_ang $~who respawn_angles
+  sp_sc_cvar_math_sub ~desired_0 ~resp_ang_0
+  sp_sc_cvar_math_mul ~desired_0 182.04
+  sp_sc_cvar_math_sub ~desired_1 ~resp_ang_1
+  sp_sc_cvar_math_mul ~desired_1 182.04
+  sf_sv_field_set ~who delta_angles ~desired
+}

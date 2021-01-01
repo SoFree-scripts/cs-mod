@@ -1,0 +1,82 @@
+function sf_sv_play_sound_queue_init()
+{
+  set ~counter 0
+  sp_sc_flow_while number cvar ~counter < val #maxclients
+  {
+    sp_sc_cvar_sset sf_sv_sound_queue_$~counter ""
+    add ~counter 1
+  }
+}
+function sf_sv_play_sound_all(~index)
+{
+  set ~slot 0
+  sp_sc_flow_while number cvar ~slot < val #maxclients
+  {
+    sp_sv_info_client $~slot
+    sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+    {
+      sp_sc_func_exec sf_sv_play_sound $~slot $~index
+    }
+    add ~slot 1
+  }
+}
+function sf_sv_play_sound( ~slot, ~index )
+{
+  sp_sc_flow_if text cvar sf_sv_sound_queue_$~slot == val ""
+  {
+    sp_sc_cvar_list G_in_s
+    sp_sc_func_exec sf_sv_index_to_sound $~index
+    sp_sc_func_exec slotSoundPlay $~slot #G_in_s 0 1 1
+    sp_sc_cvar_sset sf_sv_sound_queue_$~slot #~index "/"
+    sp_sc_cvar_copy ~time sf_sv_sound_length_$~index
+    sp_sc_cvar_sset ~cmd "sp_sc_func_exec sf_sv_play_queued_sound " #~slot
+    sp_sc_timer #~time #~cmd
+  }
+  else
+  {
+    sp_sc_cvar_append sf_sv_sound_queue_$~slot  #~index "/"
+  }
+}
+
+function sf_sv_index_to_sound(~index)
+{
+  sp_sc_cvar_copy ~sound sf_sv_sound_index_$~index
+  set G_in_s #~sound
+  sp_sc_cvar_list G_in_s
+}
+
+function sf_sv_play_queued_sound( ~slot )
+{
+  sp_sc_cvar_copy ~tmp sf_sv_sound_queue_$~slot
+  sp_sc_cvar_split ~data "/" ~tmp
+  add ~data_0 -1
+  sp_sc_flow_if number cvar ~data_0 > val 1
+  {
+    sp_sc_func_exec sf_sv_index_to_sound $~data_2
+    sp_sc_cvar_list G_in_s
+    sp_sc_func_exec slotSoundPlay $~slot #G_in_s 0 1 1
+    sp_sc_cvar_copy ~time sf_sv_sound_length_$~data_2
+    sp_sc_cvar_sset ~cmd "sp_sc_func_exec sf_sv_play_queued_sound " #~slot
+    sp_sc_timer #~time #~cmd
+    sp_sc_cvar_len ~tmp ~data_1
+    add ~tmp 1
+    sp_sc_cvar_substr ~tmp2 sf_sv_sound_queue_$~slot $~tmp 9999
+    set sf_sv_sound_queue_$~slot #~tmp2
+  }
+  else
+  {
+    sp_sc_cvar_sset sf_sv_sound_queue_$~slot ""
+  }
+}
+
+function .sdebug(*)
+{
+  set ~counter 1
+  sp_sc_flow_while number cvar ~counter <= val 4
+  {
+    sp_sc_cvar_sset ~cmd "sp_sc_func_exec sf_sv_play_sound " #~1 " " #~counter
+    $~cmd
+    add ~counter 1
+  }
+}
+
