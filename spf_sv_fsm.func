@@ -580,29 +580,30 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
       {
         //echo "time not ended"
         //time not ended
-        sp_sc_flow_if number cvar G_bomb_planted == val 0
+        set ~match 0
+        sp_sc_func_exec bp_num_players
+        //sp_sc_cvar_list G_bp_num_players_?
+        //possible timing issues to be looked into
+        sp_sc_flow_if number cvar G_bp_num_players_b == val 0
         {
-          set ~match 0
-          sp_sc_func_exec bp_num_players
-          //sp_sc_cvar_list G_bp_num_players_?
-          //possible timing issues to be looked into
-          sp_sc_flow_if number cvar G_bp_num_players_b == val 0
+          say "ctsdead"
+          //all cts dead
+          //Terrorists won
+          set ~match 1
+          set G_round_ended 1
+          //sp_sv_print_sp_broadcast 6
+          //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
+          sp_sc_func_exec sf_sv_play_sound_all 4
+          sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
+          sp_sc_timer 1000 #~cmd
+          //nothing to defuse if its not planted
+          //set G_bomb_defused 1
+        }
+        else
+        {
+          sp_sc_flow_if number cvar G_bp_num_players_r == val 0
           {
-            say "ctsdead"
-            //all cts dead
-            //Terrorists won
-            set ~match 1
-            set G_round_ended 1
-            //sp_sv_print_sp_broadcast 6
-            //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
-            sp_sc_func_exec sf_sv_play_sound_all 4
-            sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
-            sp_sc_timer 1000 #~cmd
-            set G_bomb_defused 1
-          }
-          else
-          {
-            sp_sc_flow_if number cvar G_bp_num_players_r == val 0
+            sp_sc_flow_if number cvar G_bomb_planted == val 0
             {
               echo "ts dead"
               //all t's dead
