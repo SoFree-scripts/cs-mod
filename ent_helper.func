@@ -1,3 +1,4 @@
+//This file is mostly not needed anymore after updates where made to the SoFree client
 function ent_helper_init()
 {
   sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_map_begin "ent_set_valid"
