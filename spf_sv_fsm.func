@@ -55,6 +55,8 @@ function spf_sv_fsm_on_map_begin()
   set _spf_sv_fsm_round_count 0
   set _spf_sv_fsm_round_end_frame 0
   set _spf_sv_fsm_round_idle_frame 0
+  set G_bp_ct_death_time 0
+  set G_bp_t_death_time 0
   set timelimit 0
   set fraglimit 0
   sp_sc_cvar_random_float password -100000000000 100000000000
@@ -120,11 +122,16 @@ function spf_sv_fsm_on_client_die( ~par_slot, ~par_slot_killer, ~par_mod, ~par_f
 {
   
   sp_sv_info_client $~par_slot
+  sp_sv_info_frames
   sp_sc_flow_if number cvar _sp_sv_info_client_team == val 0
-   {
-     sp_sv_info_frames
-     set G_bp_ct_death_time $_sp_sv_info_frames
-   } 
+  {
+    set G_bp_ct_death_time $_sp_sv_info_frames
+  }
+  else
+  {
+    set G_bp_t_death_time $_sp_sv_info_frames
+  }
+
   // Ignore telefrags and allow the player to respawn
   sp_sc_flow_if number val #~par_mod != val 23
   {
@@ -578,6 +585,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
           set ~match 0
           sp_sc_func_exec bp_num_players
           //sp_sc_cvar_list G_bp_num_players_?
+          //possible timing issues to be looked into
           sp_sc_flow_if number cvar G_bp_num_players_b == val 0
           {
             say "ctsdead"
@@ -585,7 +593,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
             //Terrorists won
             set ~match 1
             set G_round_ended 1
-            sp_sv_print_sp_broadcast 6
+            //sp_sv_print_sp_broadcast 6
             //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
             sp_sc_func_exec sf_sv_play_sound_all 4
             sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
@@ -601,7 +609,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
               //CT's win
               set ~match 2
               set G_round_ended 1
-              sp_sv_print_sp_broadcast 6
+              //sp_sv_print_sp_broadcast 6
               //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
               sp_sc_func_exec sf_sv_play_sound_all 3
               sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
@@ -612,86 +620,43 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
       }
       else
       {
+        //debug here
         echo "time is ended"
-        //time is ended
-        //dont end game while planting in progress
-        //its possible a spammer could make the game last for infinity
-        //maybe a delay between plants, we'll see.
         set ~match 0
         sp_sc_func_exec bp_num_players
-        
-        sp_sc_flow_if number cvar G_bp_num_players_b == val 0
-        {
-          sp_sc_flow_if number cvar G_bp_ct_death_time < val #_spf_sv_fsm_round_end_frame
-          {
-            //time is up but the last ct was killed during the game
-            //T's win!
-            echo "T's won time ended"
-            set ~match 1
-            set G_round_ended 1
-            //sp_sv_print_sp_broadcast 6
-            //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
-            sp_sc_func_exec sf_sv_play_sound_all 4
-            sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
-            sp_sc_timer 1000 #~cmd
-          }
-        }
-
-        sp_sc_flow_if number cvar G_bomb_planting == val 0
-        {
-          //CT's won
-          set ~match 2
-          set G_round_ended 1
-          echo "cT's won time ended no planting"
-        }
         sp_sc_flow_if number cvar G_bomb_planted == val 0
         {
-          //times up, bomb not planted
-          //CTs won
-          set ~match 2
-          set G_round_ended 1
-          echo "cT's won time ended no planted"
-        }
-        sp_sc_flow_if number cvar ~match == val 2
-        {
-          //sp_sv_print_sp_broadcast 6
-          //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
-          sp_sc_func_exec sf_sv_play_sound_all 3
-          sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
-          sp_sc_timer 1000 #~cmd
-        }
-      }
-      //echo "check ended"
-      sp_sc_flow_if number cvar G_round_ended == val 0
-      {
-        //if we didnt end the game - check players alive
-        sp_sc_func_exec bp_num_players
-        //echo "the check we wanted"
-        //sp_sc_cvar_list G_bp_num_players_?
-        sp_sc_flow_if number cvar G_bp_num_players_b == val 0
-        {
-          set G_round_ended 1
-          //all ct's dead
-          //t's win
-          echo "T's won, all cts dead"
-          //sp_sv_print_sp_broadcast 6
-          //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
-          sp_sc_func_exec sf_sv_play_sound_all 4
-          sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
-          sp_sc_timer 1000 #~cmd
-        }
-        sp_sc_flow_if number cvar G_bp_num_players_r == val 0
-        {
-          //all t's dead
-          sp_sc_flow_if number cvar G_bomb_planted == val 0
+          sp_sc_flow_if number cvar G_bomb_planting == val 0
           {
-            set G_round_ended 1
-            echo "CT's won, all t dead"
-            //sp_sv_print_sp_broadcast 6
-            //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
-            sp_sc_func_exec sf_sv_play_sound_all 3
-            sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
-            sp_sc_timer 1000 #~cmd
+            sp_sc_flow_if number cvar G_bp_num_players_b == val 0
+            {
+              //my attempt (not yet completed) at detecting a strange situation
+              //because we check once per second what happened
+              //CT's auto win if times up and no bomb was planted unless..
+              sp_sc_flow_if number cvar G_bp_ct_death_time < val #_spf_sv_fsm_round_end_frame
+              {
+                //last ct was killed during the game
+                //T's win!
+                echo "T's won time ended"
+                set ~match 1
+                set G_round_ended 1
+                //sp_sv_print_sp_broadcast 6
+                //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
+                sp_sc_func_exec sf_sv_play_sound_all 4
+                sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
+                sp_sc_timer 1000 #~cmd
+              }
+            }
+            else
+            {
+              //CTS win, alive and no bomb planted
+              set ~match 2
+              set G_round_ended 1
+              echo "cT's won time ended no planted"
+              sp_sc_func_exec sf_sv_play_sound_all 3
+              sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
+              sp_sc_timer 1000 #~cmd
+            }
           }
         }
       }
@@ -726,7 +691,7 @@ function bp_fsm_stuff()
   {
     //bomb is dropped on the floor somewhere. its coords are known
     echo "bomb is on the floor at location:"
-    sp_sc_cvar_list G_bomb_solt_xyz_?
+    sp_sc_cvar_list G_bomb_slot_xyz_?
   }
   //echo "no crash after fsm stuff"
 
@@ -800,12 +765,12 @@ function spf_sv_fsm_round_end( ~par_lc, ~winner )
   sp_sc_flow_if text cvar ~winner == val "t"
   {
     //ts won
-    echo "ts won"
+    say "ts won~~~~~~~~~~~~~~"
   }
   else
   {
     //cts won
-    echo "ct win"
+    say "ct win~~~~~~~~~~~~~~"
   }
   // Don't run if the counters don't match
   sp_sc_flow_if number val #~par_lc == val #_sp_sv_info_map_count
