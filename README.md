@@ -5,3 +5,5 @@ Red vs Blue - no respawning. Planting / Defusing a bomb. It's your standard coun
 
 Written using the SoFplus scripting language with extra commands/cvars from SoFree
 http://sof1.megalag.org/sofplus/download/sofplus-manual.html 
+
+I've created my own manual/tutorials to help others learn  SoFplus scripting (the pdf's in this project)
