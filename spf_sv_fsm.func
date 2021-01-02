@@ -713,38 +713,42 @@ function bp_fsm_stuff()
     sp_sc_flow_if number cvar _spf_sv_fsm_play_$~slot >= val 0
     {
       sp_sv_info_client #~slot
-
-      // Undead idle players?
-      sp_sc_flow_if number cvar _spf_sv_fsm_round_death_$~slot == val 0
-      {
-        sp_sc_flow_if number val #_sp_sv_info_client_frames_idle >= val #_spf_sv_fsm_idle_frames
+      //check if connected to stop strange kicking loop
+      sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+      { 
+        // Undead idle players?
+        sp_sc_flow_if number cvar _spf_sv_fsm_round_death_$~slot == val 0
         {
-          //sp_sv_info_frames: already did that earlier
-          sp_sc_flow_if number val #_sp_sv_info_frames >= val #_spf_sv_fsm_round_idle_frame
+          sp_sc_flow_if number val #_sp_sv_info_client_frames_idle >= val #_spf_sv_fsm_idle_frames
           {
-            sp_sv_print_sp_broadcast 1 #_sp_sv_info_client_name
-            set _spf_sv_fsm_play_$~slot 0
-            sp_sv_client_spec $~slot :-X
+            //sp_sv_info_frames: already did that earlier
+            sp_sc_flow_if number val #_sp_sv_info_frames >= val #_spf_sv_fsm_round_idle_frame
+            {
+              sp_sv_print_sp_broadcast 1 #_sp_sv_info_client_name
+              set _spf_sv_fsm_play_$~slot 0
+              sp_sv_client_spec $~slot :-X
 
-            // Unranked
-            set _spf_sv_fsm_round_death_$~slot -1
+              // Unranked
+              set _spf_sv_fsm_round_death_$~slot -1
+            }
           }
         }
-      }
 
-      // Supposedly dead, but not spectating?
-      sp_sc_flow_if number cvar _spf_sv_fsm_round_death_$~slot != val 0
-      {
-        sp_sc_flow_if number val #_sp_sv_info_client_spectator == val 0
+        // Supposedly dead, but not spectating?
+        sp_sc_flow_if number cvar _spf_sv_fsm_round_death_$~slot != val 0
         {
-          sp_sv_client_spec $~slot :-X
-
-          add _spf_sv_fsm_round_hacker_$~slot 1
-          sp_sc_flow_if number cvar _spf_sv_fsm_round_hacker_$~slot >= val 10
+          sp_sc_flow_if number val #_sp_sv_info_client_spectator == val 0
           {
-            echo Hacker $_sp_sv_info_client_ip
-            //filter_add #_sp_sv_info_client_ip
-            kick #~slot
+            sp_sv_client_spec $~slot :-X
+
+            add _spf_sv_fsm_round_hacker_$~slot 1
+            sp_sc_flow_if number cvar _spf_sv_fsm_round_hacker_$~slot >= val 10
+            {
+              //constantly kicking loop. bug
+              echo Hacker $_sp_sv_info_client_ip
+              //filter_add #_sp_sv_info_client_ip
+              kick #~slot
+            }
           }
         }
       }
