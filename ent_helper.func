@@ -745,14 +745,63 @@ function check_for_posneg(~p1,~p2)
   }
 }
 
-function draw(*)
+function .draw(*)
 {
   sf_sv_draw_clear
-  set ~x $g_ypos
-  set ~y 1
-  set ~s "lol"
+  set ~x $~2
+  set ~y $~3
+  set ~s "-------------------------"
   sf_sv_draw_string $~x $~y #~s
-  add g_ypos 10
-  sset ~cmd sp_sc_func_exec draw
-  sp_sc_timer 500 #~cmd
+  add ~y 8
+  set ~s "|1|"
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  sf_sv_draw_string $~x $~y #~s
+  add ~y 8
+  set ~s "-------------------------"
+  sf_sv_draw_string $~x $~y #~s
+  
 }
+

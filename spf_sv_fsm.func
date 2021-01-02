@@ -629,7 +629,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
             echo "T's won time ended"
             set ~match 1
             set G_round_ended 1
-            sp_sv_print_sp_broadcast 6
+            //sp_sv_print_sp_broadcast 6
             //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
             sp_sc_func_exec sf_sv_play_sound_all 4
             sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
@@ -654,7 +654,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
         }
         sp_sc_flow_if number cvar ~match == val 2
         {
-          sp_sv_print_sp_broadcast 6
+          //sp_sv_print_sp_broadcast 6
           //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
           sp_sc_func_exec sf_sv_play_sound_all 3
           sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
@@ -674,7 +674,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
           //all ct's dead
           //t's win
           echo "T's won, all cts dead"
-          sp_sv_print_sp_broadcast 6
+          //sp_sv_print_sp_broadcast 6
           //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
           sp_sc_func_exec sf_sv_play_sound_all 4
           sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
@@ -687,7 +687,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
           {
             set G_round_ended 1
             echo "CT's won, all t dead"
-            sp_sv_print_sp_broadcast 6
+            //sp_sv_print_sp_broadcast 6
             //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
             sp_sc_func_exec sf_sv_play_sound_all 3
             sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"

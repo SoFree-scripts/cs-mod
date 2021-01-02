@@ -1,0 +1,88 @@
+function dm/dust2002()
+{
+  set G_bp_areas "3"
+  //A dm/dust2002
+  set max_z_2 "138.125000"
+  set max_y_2 "2693.875000"
+  set max_x_2 "1262.625000"
+  set min_z_2 "119"
+  set min_y_2 "2323.875000"
+  set min_x_2 "1036.625000"
+  //a2 (on box)
+  set max_z_3 "190"
+  set max_y_3 "2390.500000"
+  set max_x_3 "1255.125000"
+  set min_z_3 "183"
+  set min_y_3 "2329.500000"
+  set min_x_3 "1193.125000"
+
+  //B dm/dust2002
+
+  set min_x_1 "-1723.625000"
+  set min_y_1 "2485.250000"
+  set min_z_1 "20"
+  set max_x_1 "-1343.625000"
+  set max_y_1 "2895.250000"
+  set max_z_1 "50.125000"
+}
+
+function dm/aztec2001()
+{
+  set G_bp_areas "2"
+  set max_z_2 "190"
+  set max_y_2 "2390.500000"
+  set max_x_2 "1255.125000"
+  set min_z_2 "183"
+  set min_y_2 "2329.500000"
+  set min_x_2 "1193.125000"
+
+  //B dm/dust2002
+
+  set min_x_1 "-1723.625000"
+  set min_y_1 "2485.250000"
+  set min_z_1 "20"
+  set max_x_1 "-1343.625000"
+  set max_y_1 "2895.250000"
+  set max_z_1 "50.125000"
+}
+
+function dm/dust2001()
+{
+  set G_bp_areas "2"
+  set max_z_2 "190"
+  set max_y_2 "2390.500000"
+  set max_x_2 "1255.125000"
+  set min_z_2 "183"
+  set min_y_2 "2329.500000"
+  set min_x_2 "1193.125000"
+
+  //B dm/dust2002
+
+  set min_x_1 "-1723.625000"
+  set min_y_1 "2485.250000"
+  set min_z_1 "20"
+  set max_x_1 "-1343.625000"
+  set max_y_1 "2895.250000"
+  set max_z_1 "50.125000"
+}
+
+function dm/velruf_x()
+{
+  set G_bp_areas "2"
+  set max_z_2 "190"
+  set max_y_2 "2390.500000"
+  set max_x_2 "1255.125000"
+  set min_z_2 "183"
+  set min_y_2 "2329.500000"
+  set min_x_2 "1193.125000"
+
+  //B dm/dust2002
+
+  set min_x_1 "-1723.625000"
+  set min_y_1 "2485.250000"
+  set min_z_1 "20"
+  set max_x_1 "-1343.625000"
+  set max_y_1 "2895.250000"
+  set max_z_1 "50.125000"
+}
+

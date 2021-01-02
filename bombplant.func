@@ -1,4 +1,10 @@
 
+//economy
+//money per MOD
+//rewards for planting / defusing / explode
+
+//pistol only round
+
 //bomb planted
 //but we kill all ct's , bomb still continues
 
@@ -50,6 +56,7 @@ function bombplant_init()
   sp_sc_on_change G_bomb_planting defuse_planting_change
   sp_sc_on_change G_bomb_defusing defuse_defusing_change
 
+
   sp_sc_on_change G_bomb_slot bslot_change
 	//sf_sv_sound_register "sofree/bombpl.wav"
 	sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_disconnect "bombplant_on_die"
@@ -76,6 +83,8 @@ function bombplant_init()
 	set G_tuid "defuse"
 	sp_sc_func_exec spf_sc_list_add_func _sf_sv_on_use_press "use_press1"
 	sp_sc_func_exec spf_sc_list_add_func _sf_sv_on_use_release "use_release1"
+
+  //will be map specific loaded from .cfg files ~todo
 	//A dm/dust2002
 	set max_z_2 "138.125000"
 	set max_y_2 "2693.875000"
@@ -110,9 +119,18 @@ function bombplant_init()
   set sf_sv_sound_length_2 "1776"
   set sf_sv_sound_length_3 "2090"
   set sf_sv_sound_length_4 "1907"
+  
+  set _sp_sv_ctf_switch_keep_score "2"
 
 
 }
+function bomplant_add_money(~slot,~val)
+{
+  sp_sc_cvar_copy ~money bp_money_$~slot
+  add ~money $~val
+  set bp_money_$~slot #~money
+}
+
 function defuse_defusing_change(~val)
 {
   sp_sc_cvar_copy ~val $~val
@@ -196,6 +214,7 @@ function bp_cvars_on_begin(~slot)
 	{
 		set bp_round_team_$~slot $_sp_sv_info_client_team
     set bp_swap_request_$~slot 0
+    set bp_money_$~slot 0
 	}
 }
 function bombplant_userinfo(~slot)
@@ -251,8 +270,17 @@ function bombplant_userinfo(~slot)
 }
 function bp_set_gravity(*)
 {
+  say "we spawned"
+  //on client spawn
 	sf_sv_player_gravity $~1 800
-  say "client just spawned"
+  
+  sp_sc_cvar_copy ~score G_bp_slot_score_$~1
+  sp_sc_flow_if text cvar ~score == val ""
+  {
+    set ~score 0
+  }
+  sf_sv_player_ent ~ent_p #~1
+  sf_sv_ent_field_set #~ent_p score #~score
 }
 function move_to_bomb(*)
 {
@@ -275,6 +303,7 @@ function bombplant_map_begin_new()
 	sf_sv_sound_register "sofree/c4_beep1.wav"
 	sf_sv_sound_register "sofree/c4_plant.wav"
 	set _sf_sv_debug_triggers 1
+  sp_sc_func_exec #_sp_sv_info_map_current
 }
 
 function bombplant_round_begin()
@@ -334,6 +363,13 @@ function bombplant_on_disconnect(*)
 			sp_sc_func_exec ondie_drop_bomb $~x $~y $~z
 		}
 	}
+  else
+  {
+    sp_sc_flow_if number cvar G_bomb_defusing_slot == val $~1
+    {
+      sp_sc_func_exec cancel_defuse $~1
+    }
+  }
 }
 
 
@@ -358,9 +394,42 @@ function bombplant_on_die(*)
 	}
 	sp_sc_flow_if number cvar ~victim == cvar G_bomb_defusing_slot
 	{
+    //dont have to send slot here
 		sp_sc_func_exec cancel_defuse $~victim
 		echo "~killer just killed someone defusing" 
 	}
+  sp_sc_flow_if number cvar ~victim == cvar G_bomb_planting_slot
+  {
+    sp_sc_func_exec cancel_plant
+    echo "~killer just killed someone planting" 
+  }
+  sp_sc_flow_if number cvar ~killer != val -99
+  {
+    sp_sv_info_client #~killer
+    set G_bp_slot_score_$~killer #_sp_sv_info_client_score
+    sp_sc_cvar_copy ~val G_bonus_mod_$~mod
+    //if undefined..
+    sp_sc_flow_if text cvar ~val == val ""
+    {
+      set ~val "300"
+    }
+    sp_sc_func_exec bomplant_add_money $~killer $~val
+  }
+  else
+  {
+    sp_sv_info_client #~victim
+    set G_bp_slot_score_$~victim #_sp_sv_info_client_score
+    //a suicide - automatic punishment e.g. -1000 to stop people typing 'kill'
+    //to prevent enemy earning money from killing them
+    set ~val #G_bonus_selfkill
+    sp_sc_func_exec bomplant_add_money $~victim $~val
+  }
+  
+  
+  sp_sv_info_client #~victim
+  set G_bp_slot_score_$~victim #_sp_sv_info_client_score
+
+  sp_sc_cvar_list G_bp_slot_score_*
 }
 
 
@@ -374,7 +443,7 @@ function ondie_drop_bomb(~x,~y,~z)
     set G_bomb_slot -1
     sset ~origin $~x ":" $~y ":" $~z
     set ~size "-8:-6:-10:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
-    sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+    //sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
     sp_sc_func_exec spawn_a_bomb $~x $~y $~z
   }
 }
@@ -474,6 +543,8 @@ function check_is_plant_complete_NEW()
 		{
 			echo "Plant it and unfreeze"
 			sp_sc_func_exec cancel_plant
+      //reward bomb planter
+      sp_sc_func_exec bomplant_add_money #G_bonus_plant
 			sp_sc_func_exec plant_the_bomb
 		}
 		else
@@ -546,6 +617,8 @@ function is_defuse_complete(~slot)
 		sp_sc_cvar_list G_bomb_defuse_timer
 		sp_sc_flow_if number cvar G_bomb_defuse_timer == val 5000
 		{
+      //reward bomb defuser
+      sp_sc_func_exec bomplant_add_money #G_bonus_defuse
 			sp_sc_func_exec defuse_the_bomb
 			//unfreeze him
 			sp_sc_func_exec cancel_defuse #~slot
@@ -723,8 +796,8 @@ function ts_plant_check(~slot)
        set ~y #~xyz_2
        set ~z #~xyz_3
        //sp_sc_cvar_list ~x ~y ~z
-       set ~counter 1
-       sp_sc_flow_while number cvar ~counter <= val 3
+       set ~counter 0
+       sp_sc_flow_while number cvar ~counter <= val #G_bp_areas
        {
           sp_sc_cvar_list ~counter
           sp_sc_cvar_copy ~min_x min_x_$~counter
@@ -1271,7 +1344,8 @@ function .view(*)
   sp_sc_timer 100 "sp_sc_func_exec .view"
 }
 
-function set_player_angle(~who,~desired) {
+function set_player_angle(~who,~desired) 
+{
   sp_sv_field_get ~resp_ang $~who respawn_angles
   sp_sc_cvar_math_sub ~desired_0 ~resp_ang_0
   sp_sc_cvar_math_mul ~desired_0 182.04
