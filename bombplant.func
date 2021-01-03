@@ -180,7 +180,8 @@ function defuse_inprogress_change(~val)
     //round just started
     set g_movescale 0
     sp_sc_func_exec bp_attack_on_off 0
-    sp_sc_timer 10000 "set g_movescale 1;sp_sc_func_exec bp_attack_on_off 1"
+    //time to buy weapons - talk tactics
+    sp_sc_timer #G_bp_buytime "set g_movescale 1;sp_sc_func_exec bp_attack_on_off 1"
   }
 }
 function bp_attack_on_off(~val)
@@ -329,7 +330,6 @@ function bombplant_round_begin()
 	set G_bomb_defuse_timer "0"
   set G_bomb_plant_frames "0"
   set G_bomb_defuse_frames "0"
-	set ~slot 0
 
 	//sp_sc_func_exec draw_site_triggers
 }
@@ -375,12 +375,13 @@ function bombplant_on_disconnect(*)
 
 function bombplant_on_die(*)
 {
+  //also called on disconnect  = bad
 	echo "on die bomb"
 	//killer -99 suicide
 	set ~victim #~1
 	set ~killer #~2
 	set ~mod #~3
-	sp_sc_cvar_list ~v* ~k* 
+	sp_sc_cvar_list ~v* ~k* ~mod
 	sp_sc_flow_if number cvar G_bomb_planted == val 0
 	{
 		sp_sc_flow_if number cvar ~victim == cvar G_bomb_slot
@@ -403,6 +404,7 @@ function bombplant_on_die(*)
     sp_sc_func_exec cancel_plant
     echo "~killer just killed someone planting" 
   }
+
   sp_sc_flow_if number cvar ~killer != val -99
   {
     sp_sv_info_client #~killer
@@ -442,8 +444,8 @@ function ondie_drop_bomb(~x,~y,~z)
     say "spawn a bomb"
     set G_bomb_slot -1
     sset ~origin $~x ":" $~y ":" $~z
-    set ~size "-8:-6:-10:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
-    //sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+    set ~size "-8:-6:-100:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
+    sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
     sp_sc_func_exec spawn_a_bomb $~x $~y $~z
   }
 }
@@ -499,28 +501,6 @@ function use_release1(*)
 	}
 }
 
-
-function draw_site_triggers()
-{
-	//function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
-	//A2
-	set ~callback "testing123"
-	set ~type "pluse"
-	set ~size "24:43:-14:-38:-18:-23"
-	set ~origin "1231.125000:2347.500000:184.125000"
-	//sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
-	//a 
-	set ~origin "-1633.625000:2195.250000:24.125000"
-	set ~size "290:700:-4:-90:290:-23"
-	sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
-	//B
-	set size~ "240:370:-44:14:0:-50"
-	set ~origin "21022.625000:2323.875000:152.125000"
-	sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
-
-}
-
-
 //killed during plant must be handled
 function on_plant_NEW(~slot)
 {
@@ -544,7 +524,7 @@ function check_is_plant_complete_NEW()
 			echo "Plant it and unfreeze"
 			sp_sc_func_exec cancel_plant
       //reward bomb planter
-      sp_sc_func_exec bomplant_add_money #G_bonus_plant
+      sp_sc_func_exec bomplant_add_money #G_bomb_slot #G_bonus_plant
 			sp_sc_func_exec plant_the_bomb
 		}
 		else
@@ -618,7 +598,7 @@ function is_defuse_complete(~slot)
 		sp_sc_flow_if number cvar G_bomb_defuse_timer == val 5000
 		{
       //reward bomb defuser
-      sp_sc_func_exec bomplant_add_money #G_bonus_defuse
+      sp_sc_func_exec bomplant_add_money #~slot #G_bonus_defuse
 			sp_sc_func_exec defuse_the_bomb
 			//unfreeze him
 			sp_sc_func_exec cancel_defuse #~slot

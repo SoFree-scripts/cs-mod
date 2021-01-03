@@ -49,7 +49,8 @@ function spf_sv_fsm_init()
 function spf_sv_fsm_on_map_begin()
 {
   // Initialize variables
-  set G_round_ended 0
+  set G_round_ended 1
+  sp_sc_timer 5000 "set G_round_ended 0"
   set _spf_sv_bp_rounds_won_r 0
   set _spf_sv_bp_rounds_won_b 0
   set _spf_sv_fsm_round_count 0
@@ -57,6 +58,8 @@ function spf_sv_fsm_on_map_begin()
   set _spf_sv_fsm_round_idle_frame 0
   set G_bp_ct_death_time 0
   set G_bp_t_death_time 0
+  set G_bp_t_lose_streak 0
+  set G_bp_ct_lose_streak 0
   set timelimit 0
   set fraglimit 0
   sp_sc_cvar_random_float password -100000000000 100000000000
@@ -426,7 +429,6 @@ function spf_sv_fsm_round_start()
 {
   //reset bp cvars and remove bomb ent
   sp_sc_func_exec bombplant_round_begin
-  set bp_round_inprogress 1
   sp_sc_timer 5000 "sp_sc_func_exec bombplant_pick_bomb"
   // Check how many clients want to play
   set ~count 0
@@ -446,6 +448,7 @@ function spf_sv_fsm_round_start()
   // Only start a round with 2 or more players
   sp_sc_flow_if number val #~count > val 1
   {
+    set bp_round_inprogress 1
     sp_sc_cvar_random_float password -100000000000 100000000000
 
     // In cs, you can only spectate your team
@@ -477,12 +480,17 @@ function spf_sv_fsm_round_start()
     sp_sv_info_frames
 
     set _spf_sv_fsm_round_end_frame #_sp_sv_info_frames
-    add _spf_sv_fsm_round_end_frame #_spf_sv_fsm_round_duration
+    //Account for round buytime
+    set ~tmp #_spf_sv_fsm_round_duration
+    sp_sc_cvar_math_div ~tmp 100
+    add ~tmp #_spf_sv_fsm_round_duration
+    add _spf_sv_fsm_round_end_frame #~tmp
 
     set _spf_sv_fsm_round_idle_frame #_sp_sv_info_frames
     add _spf_sv_fsm_round_idle_frame #_spf_sv_fsm_idle_frames
 
     //set _sp_sv_echo_spectator 2
+    //to be changed for defuse. Maybe unmuted when round in progress = 0 (a la xbox live)
     set _spf_sv_fsm_unmute_frame #_sp_sv_info_frames
     add _spf_sv_fsm_unmute_frame #_spf_sv_fsm_unmute_delay
 
@@ -490,7 +498,7 @@ function spf_sv_fsm_round_start()
     //sp_sc_timer 4500 "sp_sc_cvar_random_float password -100000000000 100000000000"
 
     // Checks for round end and to unmute spectators
-    sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_check_loop" #_sp_sv_info_map_count
+    sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_check_loop" #_sp_sv_info_map_count 
     sp_sc_timer 5000 #~cmd
   }
   else
@@ -512,6 +520,7 @@ function bp_num_players()
   sp_sc_flow_while number cvar ~slot < val #maxclients
   {
     //echo "before spec check"
+    zero _sp_sv_info_client_ip
     sp_sv_info_client $~slot
     sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
     {
@@ -534,6 +543,7 @@ function bp_num_players()
 
 function spf_sv_fsm_round_check_loop( ~par_lc )
 { 
+  sp_sc_cvar_list bp_round_inprogress
   set G_round_ended 0
   set ~ct "sofree/ctswin.wav"
   set ~t "sofree/tswin.wav"
@@ -665,9 +675,13 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
   }
   sp_sc_flow_if number cvar G_round_ended == val 0
   {
-    //echo "loop again?"
-    sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_check_loop" #_sp_sv_info_map_count
-    sp_sc_timer 1000 #~cmd
+    //Stop the loop when map is changed by admin.
+    sp_sc_flow_if number cvar bp_round_inprogress == val 1
+    {
+      //echo "loop again?"
+      sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_check_loop" #_sp_sv_info_map_count
+      sp_sc_timer 1000 #~cmd
+    }
   }
   sp_sc_func_exec bp_fsm_stuff
 }
@@ -702,7 +716,7 @@ function bp_fsm_stuff()
   sp_sc_flow_if number val #_sp_sv_info_frames >= val #_spf_sv_fsm_unmute_frame
   {
     sp_sv_print_sp_broadcast 0
-    //set _sp_sv_echo_spectator 1
+    set _sp_sv_echo_spectator 1
     set _spf_sv_fsm_unmute_frame 999999999
   }
 
@@ -771,6 +785,8 @@ function spf_sv_fsm_round_end( ~par_lc, ~winner )
   {
     //ts won
     say "ts won~~~~~~~~~~~~~~"
+    //t's get bonus money for winning
+    //ct's get loser money.. losing streak also..
   }
   else
   {

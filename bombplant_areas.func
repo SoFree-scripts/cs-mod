@@ -1,3 +1,4 @@
+//draw the trigger boxes
 function dm/dust2002()
 {
   set G_bp_areas "3"
@@ -24,6 +25,24 @@ function dm/dust2002()
   set max_x_1 "-1343.625000"
   set max_y_1 "2895.250000"
   set max_z_1 "50.125000"
+
+    //function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
+  //A2
+  //set ~type "touch";set ~tuid "bombt"
+  set ~callback "testing123"
+  set ~type "touch"
+  set ~tuid "bparea"
+  set ~size "24:43:-14:-38:-18:-23"
+  set ~origin "1231.125000:2347.500000:184.125000"
+  //sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+  //a 
+  set ~origin "-1633.625000:2195.250000:24.125000"
+  set ~size "290:700:-4:-90:290:-23"
+  sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+  //B
+  set size~ "240:370:-44:14:0:-50"
+  set ~origin "21022.625000:2323.875000:152.125000"
+  sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
 }
 
 function dm/aztec2001()
@@ -69,20 +88,30 @@ function dm/dust2001()
 function dm/velruf_x()
 {
   set G_bp_areas "2"
-  set max_z_2 "190"
-  set max_y_2 "2390.500000"
-  set max_x_2 "1255.125000"
-  set min_z_2 "183"
-  set min_y_2 "2329.500000"
-  set min_x_2 "1193.125000"
+  set max_z_2 "-135.875000"
+  set max_y_2 "751.875000"
+  set max_x_2 "2193.375000"
+  set min_z_2 "-135.875000"
+  set min_y_2 "528.125000"
+  set min_x_2 "1761.000000"
+  
 
-  //B dm/dust2002
+  set min_x_1 "897.625000"
+  set min_y_1 "1464.875000"
+  set min_z_1 "-87.875000"
+  set max_x_1 "1367.625000"
+  set max_y_1 "1967.625000"
+  set max_z_1 "-87.875000"
 
-  set min_x_1 "-1723.625000"
-  set min_y_1 "2485.250000"
-  set min_z_1 "20"
-  set max_x_1 "-1343.625000"
-  set max_y_1 "2895.250000"
-  set max_z_1 "50.125000"
+  set ~callback "testing123"
+  set ~type "touch"
+  set ~tuid "bparea"
+  set ~size "470:502.75:5:0:0:0"
+  set ~origin "897.625000:1464.875000:-87.875000"
+  sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+  //a 
+  set ~origin "1761.000000:528.125000:-135.875000"
+  set ~size "432.375:223.75:5:0:0:0"
+  sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
 }
 
