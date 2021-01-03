@@ -757,7 +757,7 @@ function .draw(*)
   set ~s "-------------------------"
   sf_sv_draw_string $~x $~y #~s
   add ~y 8
-  set ~s "|1|"
+  set ~s "|1                      |"
   sf_sv_draw_string $~x $~y #~s
   add ~y 8
   sf_sv_draw_string $~x $~y #~s

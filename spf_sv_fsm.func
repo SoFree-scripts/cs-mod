@@ -4,6 +4,8 @@
 // Final Standing Man
 // ---------------------------------------------------------------------------
 
+//blue - 1. red is 2, not 0
+
 //counterstrike red vs blue (SoF Strike Mod)
 
 //gracperiod - killswitch
@@ -126,7 +128,7 @@ function spf_sv_fsm_on_client_die( ~par_slot, ~par_slot_killer, ~par_mod, ~par_f
   
   sp_sv_info_client $~par_slot
   sp_sv_info_frames
-  sp_sc_flow_if number cvar _sp_sv_info_client_team == val 0
+  sp_sc_flow_if number cvar _sp_sv_info_client_team == val 1
   {
     set G_bp_ct_death_time $_sp_sv_info_frames
   }
@@ -541,13 +543,37 @@ function bp_num_players()
   }
 }
 
+function bp_reward_team(~team,~val)
+{
+  set ~slot 0
+  sp_sc_flow_while number cvar ~slot < val #maxclients
+  {
+    //echo "before spec check"
+    zero _sp_sv_info_client_ip
+    sp_sv_info_client $~slot
+    sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
+    {
+      sp_sc_flow_if number cvar _sp_sv_info_client_team == val #~team
+      {
+        //check we're playing 
+        sp_sc_flow_if number cvar _spf_sv_fsm_play_$~slot == val 1
+        {
+          sp_sc_func_exec bomplant_add_money #~slot #~val
+        }
+      }
+    }
+    add ~slot 1
+  }
+}
+
 function spf_sv_fsm_round_check_loop( ~par_lc )
 { 
-  sp_sc_cvar_list bp_round_inprogress
+  //sp_sc_cvar_list bp_round_inprogress
+  sp_sc_cvar_list bp_money_*
   set G_round_ended 0
   set ~ct "sofree/ctswin.wav"
   set ~t "sofree/tswin.wav"
-  //set total red blue
+  //set total red blue 1 = blue . 0 = red
   // Don't run if the counters don't match
   sp_sc_flow_if number val #~par_lc == val #_sp_sv_info_map_count
   {
@@ -560,6 +586,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
       set G_round_ended 1
       sp_sv_print_sp_broadcast 6
       //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
+      sp_sc_func_exec bp_reward_team 2 #G_bp_win_explode
       sp_sc_func_exec sf_sv_play_sound_all 4
       sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
       sp_sc_timer 1000 #~cmd
@@ -572,6 +599,8 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
       set G_round_ended 1
       sp_sv_print_sp_broadcast 6
       //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
+      sp_sc_func_exec bp_reward_team 1 #G_bp_win_defusal
+      sp_sc_func_exec bp_reward_team 2 #G_bp_lose_plant
       sp_sc_func_exec sf_sv_play_sound_all 2
       sp_sc_func_exec sf_sv_play_sound_all 3
       sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
@@ -596,13 +625,14 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
         //possible timing issues to be looked into
         sp_sc_flow_if number cvar G_bp_num_players_b == val 0
         {
-          say "ctsdead"
+          echo "t win elimination"
           //all cts dead
           //Terrorists won
           set ~match 1
           set G_round_ended 1
           //sp_sv_print_sp_broadcast 6
           //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
+          sp_sc_func_exec bp_reward_team 2 #G_bp_win_elimination
           sp_sc_func_exec sf_sv_play_sound_all 4
           sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
           sp_sc_timer 1000 #~cmd
@@ -622,6 +652,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
               set G_round_ended 1
               //sp_sv_print_sp_broadcast 6
               //sp_sc_func_exec slotSoundPlay 0 #~ct 0 0 1
+              sp_sc_func_exec bp_reward_team 1 #G_bp_win_elimination
               sp_sc_func_exec sf_sv_play_sound_all 3
               sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
               sp_sc_timer 1000 #~cmd
@@ -653,6 +684,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
                 set G_round_ended 1
                 //sp_sv_print_sp_broadcast 6
                 //sp_sc_func_exec slotSoundPlay 0 #~t 0 0 1
+                sp_sc_func_exec bp_reward_team 2 #G_bp_win_elimination
                 sp_sc_func_exec sf_sv_play_sound_all 4
                 sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "t"
                 sp_sc_timer 1000 #~cmd
@@ -664,6 +696,7 @@ function spf_sv_fsm_round_check_loop( ~par_lc )
               set ~match 2
               set G_round_ended 1
               echo "cT's won time ended no planted"
+              sp_sc_func_exec bp_reward_team 1 #G_bp_win_timeout
               sp_sc_func_exec sf_sv_play_sound_all 3
               sset ~cmd "sp_sc_func_exec spf_sv_fsm_round_end" #_sp_sv_info_map_count "ct"
               sp_sc_timer 1000 #~cmd
@@ -781,17 +814,47 @@ function spf_sv_fsm_round_end( ~par_lc, ~winner )
   //sp_sv_client_swap
   set bp_round_inprogress 0
   set G_bomb_defused 1
+  //1400 loss += (500*streak) to a max of 3400. can also +800 on bomb plant loss
+  //set G_bonus_lose "1400"
+  //set G_bonus_lose_bonus "500"
+  //1  = blue
+  set ~l_bonus #G_bonus_lose_bonus
+  set ~l #G_bonus_lose
   sp_sc_flow_if text cvar ~winner == val "t"
   {
-    //ts won
-    say "ts won~~~~~~~~~~~~~~"
-    //t's get bonus money for winning
     //ct's get loser money.. losing streak also..
+    sp_sc_cvar_math_mul ~l #G_bonus_ct_lose_streak
+    add ~l #~l_bonus
+    sp_sc_flow_if number cvar ~l > val "3400"
+    {
+      set ~l "3400"
+    }
+    sp_sc_func_exec bp_reward_team 1 #~l
+    add G_bonus_ct_lose_streak 1
+    add G_bonus_t_lose_streak -1
+    sp_sc_flow_if number cvar G_bonus_t_lose_streak < val 0
+    {
+      set G_bonus_t_lose_streak 0
+    }
   }
   else
   {
-    //cts won
-    say "ct win~~~~~~~~~~~~~~"
+    //t's get loser money
+    //if ct's have loser streak -= 1
+    //set G_bonus_t_lose_streak "1"
+    sp_sc_cvar_math_mul ~l #G_bonus_t_lose_streak
+    add ~l #~l_bonus
+    sp_sc_flow_if number cvar ~l > val "3400"
+    {
+      set ~l "3400"
+    }
+    sp_sc_func_exec bp_reward_team 2 #~l
+    add G_bonus_t_lose_streak 1
+    add G_bonus_ct_lose_streak -1
+    sp_sc_flow_if number cvar G_bonus_ct_lose_streak < val 0
+    {
+      set G_bonus_ct_lose_streak 0
+    }
   }
   // Don't run if the counters don't match
   sp_sc_flow_if number val #~par_lc == val #_sp_sv_info_map_count
@@ -1074,3 +1137,4 @@ function spf_sv_fsm_mh()
 //#define CHAN_BODY               4
 //#define CHAN_ENT1                               5
 //#define CHAN_ENT2                               6
+

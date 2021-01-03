@@ -51,7 +51,7 @@
 function bombplant_init()
 {
 
-	sp_sc_on_change G_bomb_defusing_slot defuse_slot_change
+  sp_sc_on_change G_bomb_defusing_slot defuse_slot_change
   sp_sc_on_change bp_round_inprogress defuse_inprogress_change
   sp_sc_on_change G_bomb_planting defuse_planting_change
   sp_sc_on_change G_bomb_defusing defuse_defusing_change
@@ -128,7 +128,17 @@ function bomplant_add_money(~slot,~val)
 {
   sp_sc_cvar_copy ~money bp_money_$~slot
   add ~money $~val
+  sp_sc_flow_if number cvar ~money > val #G_bp_max_cash
+  {
+    set ~money #G_bp_max_cash
+  }
+  sp_sc_flow_if number cvar ~money < val #G_bp_start_cash
+  {
+    set ~money #G_bp_start_cash
+  }
   set bp_money_$~slot #~money
+  sset ~msg "Your total cash is now:" #~money
+  sp_sv_print_client $~slot #~msg
 }
 
 function defuse_defusing_change(~val)
@@ -215,13 +225,13 @@ function bp_cvars_on_begin(~slot)
 	{
 		set bp_round_team_$~slot $_sp_sv_info_client_team
     set bp_swap_request_$~slot 0
-    set bp_money_$~slot 0
+    set bp_money_$~slot #G_bp_start_cash 
 	}
 }
 function bombplant_userinfo(~slot)
 {
   //when going to spectator - you 'die' also so checks here not needed
-  say "userinfo"
+  //say "userinfo"
   zero _sp_sv_info_client_ip
   zero _sp_sv_info_client_spectator
   zero _sp_sv_info_client_team
@@ -264,6 +274,7 @@ function bombplant_userinfo(~slot)
           sp_sv_client_swap $~slot
           say "swap request made"
           set bp_swap_request_$~slot 1
+          set bp_money_$~slot #G_bp_start_cash
         }
       }
     }
@@ -271,7 +282,7 @@ function bombplant_userinfo(~slot)
 }
 function bp_set_gravity(*)
 {
-  say "we spawned"
+  //say "we spawned"
   //on client spawn
 	sf_sv_player_gravity $~1 800
   
@@ -386,7 +397,7 @@ function bombplant_on_die(*)
 	{
 		sp_sc_flow_if number cvar ~victim == cvar G_bomb_slot
 		{
-			say "Bomb carrier just died!!"
+			//say "Bomb carrier just died!!"
 			set ~x $G_bomb_slot_xyz_1
       set ~y $G_bomb_slot_xyz_2
       set ~z $G_bomb_slot_xyz_3
@@ -423,8 +434,9 @@ function bombplant_on_die(*)
     set G_bp_slot_score_$~victim #_sp_sv_info_client_score
     //a suicide - automatic punishment e.g. -1000 to stop people typing 'kill'
     //to prevent enemy earning money from killing them
-    set ~val #G_bonus_selfkill
-    sp_sc_func_exec bomplant_add_money $~victim $~val
+    //set ~val #G_bonus_selfkill
+    //sp_sc_func_exec bomplant_add_money $~victim $~val
+    //The punishment of losing weapons should be enough
   }
   
   
@@ -441,7 +453,7 @@ function ondie_drop_bomb(~x,~y,~z)
   sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
   {
     echo "do stuff with coords"
-    say "spawn a bomb"
+    //say "spawn a bomb"
     set G_bomb_slot -1
     sset ~origin $~x ":" $~y ":" $~z
     set ~size "-8:-6:-100:8:6:21";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
@@ -524,7 +536,7 @@ function check_is_plant_complete_NEW()
 			echo "Plant it and unfreeze"
 			sp_sc_func_exec cancel_plant
       //reward bomb planter
-      sp_sc_func_exec bomplant_add_money #G_bomb_slot #G_bonus_plant
+      sp_sc_func_exec bomplant_add_money #G_bomb_slot #G_bp_bonus_plant
 			sp_sc_func_exec plant_the_bomb
 		}
 		else
@@ -598,7 +610,7 @@ function is_defuse_complete(~slot)
 		sp_sc_flow_if number cvar G_bomb_defuse_timer == val 5000
 		{
       //reward bomb defuser
-      sp_sc_func_exec bomplant_add_money #~slot #G_bonus_defuse
+      sp_sc_func_exec bomplant_add_money #~slot #G_bp_bonus_defuse
 			sp_sc_func_exec defuse_the_bomb
 			//unfreeze him
 			sp_sc_func_exec cancel_defuse #~slot
@@ -641,7 +653,7 @@ function cancel_plant()
 function freeze_player(~slot,~val)
 {
   sset ~cmd "freeze player" $~slot ":" $~val
-  say #~cmd
+  //say #~cmd
   zero _sp_sv_info_client_ip
   sp_sv_info_client $~slot
   sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
@@ -996,7 +1008,7 @@ function explode_timer()
 
 function c4_beep_loop()
 {
-  say "loop"
+  //say "loop"
   sp_sc_cvar_list G_bomb_defused G_bomb_exploded beep_delay
   sp_sc_flow_if number cvar G_bomb_defused == val 0
   {
@@ -1015,12 +1027,12 @@ function c4_beep_loop()
   {
     say "bombs defused"
   }
-  say "what"
+  //say "what"
 }
 
 function c4_flash(~state)
 {
-  say "c4 flash"
+  //say "c4 flash"
   set ~restart 1
   set ~loop 3
   set ~match 0
@@ -1028,7 +1040,7 @@ function c4_flash(~state)
   
   sp_sc_flow_if number cvar ~state == val 1
   {
-    say "1"
+    //say "1"
     set ~startpos 0.0
     set ~state 0
     sset ~cmd sp_sc_func_exec c4_flash $~state
@@ -1036,7 +1048,7 @@ function c4_flash(~state)
   }
   else
   {
-    say "beep"
+    //say "beep"
     sf_sv_sound_play_ent "weapons/c4/beep.wav" $G_bomb_ent 0 1 1 0
     set ~startpos 0.2
     set ~state 1
