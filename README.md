@@ -1,5 +1,5 @@
 # cs-mod
-Bombplant/Defuse mod for Soldier of Fortune I
+Bombplant/Defuse mod for Soldier of Fortune I (Requires an SoFree server client which is unreleased for now)
 
 Red vs Blue - no respawning. Planting / Defusing a bomb. It's your standard counter strike gametype.
 
