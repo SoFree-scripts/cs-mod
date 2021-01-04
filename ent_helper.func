@@ -565,7 +565,7 @@ function player_set_delta_angles(~ent,~x,~y, ~z)
 //should be universal
 function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
 {
-  echo "Trigger spawn ****************************"
+  //echo "Trigger spawn ****************************"
   //sp_sc_cvar_list ~*
   //spawn a self referencing trigger (a gate)
   //create->initvars->spawn->setsize
@@ -602,8 +602,9 @@ function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
   //sp_sc_func_exec ent_get_angles $~ent
   //sp_sc_cvar_list ent_get_?
 
-  sp_sv_info_frames
-  set _sf_sv_bomb_drop_frames #_sp_sv_info_frames
+  //fixed
+  //sp_sv_info_frames
+  //set _sf_sv_bomb_drop_frames #_sp_sv_info_frames
 }
 //sf_sv_sound_play_ent #~sound $G_bomb_ent 1 1 0 0
 function slotSoundPlay(~slot,~sound,~atten,~clbool,~fake)

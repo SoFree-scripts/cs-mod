@@ -57,6 +57,8 @@ function bombplant_init()
   sp_sc_on_change bp_round_inprogress defuse_inprogress_change
   sp_sc_on_change G_bomb_planting defuse_planting_change
   sp_sc_on_change G_bomb_defusing defuse_defusing_change
+  //debug
+  sp_sc_on_change _sf_sv_bomb_drop_frames bomb_dropframes
 
 
   sp_sc_on_change G_bomb_slot bslot_change
@@ -448,9 +450,9 @@ function bombplant_on_die(*)
   sp_sc_cvar_list G_bp_slot_score_*
 }
 
-
 function ondie_drop_bomb(~x,~y,~z)
 {
+  echo "calling ondie drop bomb"
   sp_sv_info_client $G_bomb_slot
   sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""
   {
@@ -459,6 +461,7 @@ function ondie_drop_bomb(~x,~y,~z)
     set G_bomb_slot -1
     //drop frames was never set. Headache cured
     sp_sv_info_frames 
+    echo "set drop frames"
     set _sf_sv_bomb_drop_frames #_sp_sv_info_frames
     sp_sc_func_exec spawn_a_bomb $~x $~y $~z
     sset ~origin $~x ":" $~y ":" $~z
@@ -467,7 +470,11 @@ function ondie_drop_bomb(~x,~y,~z)
   }
 }
 
-
+function bomb_dropframes(~val)
+{
+  sp_sc_cvar_copy ~f $~val
+  say #~f
+}
 function use_press1(*)
 {
 	//echo "lol"
@@ -1106,118 +1113,136 @@ function spawn_a_bomb(~x, ~y, ~z)
   sp_sc_timer 100 #~cmd
 }
 
-function .spawnit(*)
+function .dropit(*)
 {
-	sf_sv_player_pos ~xyz #~1
-	sp_sc_func_exec ondie_drop_bomb #~xyz_1 #~xyz_2 #~xyz_3
+  sp_sc_flow_if number cvar ~1 == val #G_bomb_slot
+  {
+    sp_sc_flow_if number cvar G_bomb_planting == val 0
+    {
+      sf_sv_player_pos ~xyz #~1
+      sp_sc_func_exec ondie_drop_bomb #~xyz_1 #~xyz_2 #~xyz_3
+    }
+    else
+    {
+      sp_sv_print_client $~1 "Cant drop while defusing"
+    }
+  }
+  else
+  {
+    sp_sv_print_client $~1 "You dont have the bomb"
+  }
+
 }
 //
  //-28.689480 : [1] misc_generic_wpn_c4 
 
 function defuse_trigger_on_bomb(~x,~y,~z)
 {
-	echo "defuse on triggera"
-  sp_sc_flow_if text cvar G_bomb_ent != val ""
+  sp_sc_flow_if number cvar G_bomb_slot == val -1
   {
-    sp_sc_cvar_list ~x ~y ~z
-    sf_sv_ent_field_get G_bomb_ent_xyz #G_bomb_ent origin
-    sp_sc_cvar_list G_bomb_ent_xyz_?
-    set ~x_new #G_bomb_ent_xyz_1
-    set ~y_new #G_bomb_ent_xyz_2
-    set ~z_new #G_bomb_ent_xyz_3
-    set ~match 0
-    sp_sc_flow_if text val #~x_new == val #~x
+    //echo "defuse on triggera"
+    sp_sc_flow_if text cvar G_bomb_ent != val ""
     {
-      sset ~msg "compare:" #~y_new "to:" #~y
-      echo #~msg
-      sp_sc_flow_if text val #~y_new == val #~y
+      //sp_sc_cvar_list ~x ~y ~z
+      sf_sv_ent_field_get G_bomb_ent_xyz #G_bomb_ent origin
+      //sp_sc_cvar_list G_bomb_ent_xyz_?
+      set ~x_new #G_bomb_ent_xyz_1
+      set ~y_new #G_bomb_ent_xyz_2
+      set ~z_new #G_bomb_ent_xyz_3
+      set ~match 0
+      sp_sc_flow_if text val #~x_new == val #~x
       {
-        sp_sc_flow_if text val #~z_new == val #~z
+        sset ~msg "compare:" #~y_new "to:" #~y
+        //echo #~msg
+        sp_sc_flow_if text val #~y_new == val #~y
         {
-          set ~match 1
+          sp_sc_flow_if text val #~z_new == val #~z
+          {
+            set ~match 1
+          }
         }
       }
-    }
-    sp_sc_cvar_list ~match
-    sp_sc_flow_if number cvar ~match != val 1    
-    {
-      //bomb is moving, set new trigger coordinates for pickup
-      sp_sc_cvar_list ~?_new
-      sset ~cmd sp_sc_func_exec defuse_trigger_on_bomb $~x_new $~y_new $~z_new
-      sp_sc_timer 1000 #~cmd
-      sf_sv_ent_find ~bomb 452 bombt
-      set ~counter 1
-      sp_sc_flow_while number cvar ~counter <= cvar ~bomb_0
+      //sp_sc_cvar_list ~match
+      sp_sc_flow_if number cvar ~match != val 1    
       {
-        sp_sc_cvar_copy ~ent ~bomb_$~counter
-        sf_sv_ent_remove #~ent
-        add ~counter 1
+        //bomb is moving, set new trigger coordinates for pickup
+        //sp_sc_cvar_list ~?_new
+        sset ~cmd sp_sc_func_exec defuse_trigger_on_bomb $~x_new $~y_new $~z_new
+        sp_sc_timer 500 #~cmd
+        sf_sv_ent_find ~bomb 452 bombt
+        set ~counter 1
+        sp_sc_flow_while number cvar ~counter <= cvar ~bomb_0
+        {
+          sp_sc_cvar_copy ~ent ~bomb_$~counter
+          sf_sv_ent_remove #~ent
+          add ~counter 1
+        }
+        sset ~origin $~x_new ":" $~y_new ":" $~z_new
+        set ~size "20:20:20:-20:-20:0";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
+        sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
+        add ~x_new -8
+        set min_b_x $~x_new
+        add ~y_new -6
+        set min_b_y $~y_new
+        add ~z_new -50
+        set min_b_z $~z_new
+        add ~x_new 16 
+        set max_b_x $~x_new
+        add ~y_new 12
+        set max_b_y $~y_new
+        add ~z_new 100
+        set max_b_z $~z_new
       }
-      sset ~origin $~x_new ":" $~y_new ":" $~z_new
-      set ~size "20:20:20:-20:-20:0";set ~callback "bombplant_pickup_bomb";set ~type "touch";set ~tuid "bombt"
-      sp_sc_func_exec spawn_a_trigger #~origin #~size #~callback #~type #~tuid 
-      add ~x_new -8
-      set min_b_x $~x_new
-      add ~y_new -6
-      set min_b_y $~y_new
-      add ~z_new -50
-      set min_b_z $~z_new
-      add ~x_new 16 
-      set max_b_x $~x_new
-      add ~y_new 12
-      set max_b_y $~y_new
-      add ~z_new 100
-      set max_b_z $~z_new
+      //sp_sc_cvar_list GLOBAL_tuid_bombt
+      //sf_sv_ent_field_set #GLOBAL_tuid_bombt origin G_bomb_ent_xyz
+
+      //create trigger bounding box for defusal
     }
-    //sp_sc_cvar_list GLOBAL_tuid_bombt
-    //sf_sv_ent_field_set #GLOBAL_tuid_bombt origin G_bomb_ent_xyz
-
-    //create trigger bounding box for defusal
-
   }
+
 }
 
 function bombplant_pickup_bomb(*)
 {
   //say "touch"
-  sp_sc_func_exec ent_get_skinnum #~2
-  set ~slot #GLOBAL_skinnum
-  //sp_sc_cvar_list ~*
-	sp_sc_flow_if number cvar G_bomb_planted == val 0
-	{
-		//say "bomb isnt planted"
-		zero _sp_sv_info_client_ip
-		sp_sv_info_client #~slot 
-		sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""                       
-		{
-      sp_sc_flow_if number cvar _sp_sv_info_client_team == val 2
+  sf_sv_ent_field_get ~hp #~2 health
+  //stop spectators picking the bomb up
+  sp_sc_flow_if number cvar ~hp > val 0
+  {
+    sp_sc_func_exec ent_get_skinnum #~2
+    set ~slot #GLOBAL_skinnum
+    sp_sc_flow_if number cvar G_bomb_planted == val 0
+    {
+      //say "bomb isnt planted"
+      zero _sp_sv_info_client_ip
+      sp_sv_info_client #~slot 
+      sp_sc_flow_if text cvar _sp_sv_info_client_ip != val ""                       
       {
-        set ~dropframes #_sf_sv_bomb_drop_frames
-        sp_sv_info_frames
-        set ~now #_sp_sv_info_frames
-        add ~now -$~dropframes
-        sset ~cmd "drop to pick up time:" $~now
-        //say #~cmd
-        sp_sc_flow_if number cvar ~now > val 10
+        sp_sc_flow_if number cvar _sp_sv_info_client_team == val 2
         {
-          //T touched the bomb
-          say "we picked the bomb up again"
-          sp_sc_func_exec bp_remove_trash
-          set ~sound "weapons/gpistol/cock.wav"
-          sp_sc_func_exec slotSoundPlay $~slot $~sound 2 0 0
-          set G_bomb_ent ""
-          set G_bomb_slot #~slot
-        } 
-      }
-		}             
+          set ~dropframes #_sf_sv_bomb_drop_frames
+          sp_sv_info_frames
+          set ~now #_sp_sv_info_frames
+          add ~now -$~dropframes
+          sp_sc_flow_if number cvar ~now > val 3
+          {
+            //T touched the bomb
+            sp_sc_func_exec bp_remove_trash
+            set ~sound "weapons/gpistol/cock.wav"
+            sp_sc_func_exec slotSoundPlay $~slot $~sound 2 0 0
+            set G_bomb_ent ""
+            set G_bomb_slot #~slot
+          } 
+        }
+      }             
 
-	}
-	else
-	{
-		//if we're ct + planted - print a hint to def+use??
-    //say "we're planted"
-	}
-	
+    }
+    else
+    {
+      //if we're ct + planted - print a hint to def+use??
+      //say "we're planted"
+    }
+  }
 }
 function defuse_the_bomb(*)
 {
@@ -1360,15 +1385,6 @@ function bp_remove_trash()
     sf_sv_ent_remove #~ent
     add ~counter 1
   }
-  sf_sv_ent_find ~trash 436 "Nug Buddy"
-  set ~counter 1
-  sp_sc_flow_while number cvar ~counter <= cvar ~trash_0
-  {
-    sp_sc_cvar_copy ~ent ~trash_$~counter
-    sf_sv_ent_remove #~ent
-    add ~counter 1
-  }
-  set G_bomb_ent ""
 }
 
 
@@ -1405,3 +1421,32 @@ function .sanity(*)
     "RQ"
   }
 }
+
+function find_noclass(~slot,~counter)
+{
+  sf_sv_ent_find ~trash 436 "noclass"
+  sp_sc_flow_if text cvar ~counter == val ""
+  {
+    set ~counter 1
+  }
+  sp_sc_flow_if number cvar ~counter <= cvar ~trash_0
+  {
+    sp_sc_cvar_copy ~ent ~trash_$~counter
+    sf_sv_ent_field_get ~v #~ent origin
+    sf_sv_ent_field_get ~f #~ent flags
+
+    sf_sv_player_move $~slot ~v
+
+    sset ~msg "teleporting to ent:" #~ent "with flags:" #~f
+    say #~msg
+    add ~counter 1
+    sset ~cmd sp_sc_func_exec find_noclass $~slot $~counter
+    sp_sc_timer 1000 #~cmd
+  }
+}
+
+function .noclass(*)
+{
+  sp_sc_func_exec find_noclass $~1 1
+}
+

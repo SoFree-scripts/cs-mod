@@ -192,6 +192,7 @@ function spf_sv_fsm_on_client_spawn( ~par_slot )
           sp_sc_func_exec ondie_drop_bomb $~x $~y $~z 
         }
         //~~freeze him~~
+        //last enemy to damage him gets the kill (simplistic)
         sp_sc_func_exec freeze_player $~par_slot 1
       }
       else
