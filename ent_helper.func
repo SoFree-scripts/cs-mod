@@ -591,7 +591,6 @@ function spawn_a_trigger(~origin,~size,~callback,~type,~tuid)
   sf_sv_ent_field_set #~ent targetname #~tuid
   sf_sv_ent_field_set #~ent target #~tuid
   sf_sv_ent_spawn #~ent
-  set G_spawn_trigger_ent #~ent
 
   sf_sv_ent_callback $~ent $~type $~callback
   sf_sv_ent_field_set $~ent mins ~mins

@@ -569,7 +569,7 @@ function bp_reward_team(~team,~val)
 function spf_sv_fsm_round_check_loop( ~par_lc )
 { 
   //sp_sc_cvar_list bp_round_inprogress
-  sp_sc_cvar_list bp_money_*
+  //sp_sc_cvar_list bp_money_*
   set G_round_ended 0
   set ~ct "sofree/ctswin.wav"
   set ~t "sofree/tswin.wav"
@@ -738,8 +738,8 @@ function bp_fsm_stuff()
   else
   {
     //bomb is dropped on the floor somewhere. its coords are known
-    echo "bomb is on the floor at location:"
-    sp_sc_cvar_list G_bomb_slot_xyz_?
+    //echo "bomb is on the floor at location:"
+    //sp_sc_cvar_list G_bomb_slot_xyz_?
   }
   //echo "no crash after fsm stuff"
 
@@ -818,10 +818,15 @@ function spf_sv_fsm_round_end( ~par_lc, ~winner )
   //set G_bonus_lose "1400"
   //set G_bonus_lose_bonus "500"
   //1  = blue
+  //set bp_money_2 "800"
+  //set bp_money_3 "1400"
+  //set bp_money_1 "800"
+  //asset bp_money_0 "800"
   set ~l_bonus #G_bonus_lose_bonus
   set ~l #G_bonus_lose
   sp_sc_flow_if text cvar ~winner == val "t"
   {
+    echo "winner = t"
     //ct's get loser money.. losing streak also..
     sp_sc_cvar_math_mul ~l #G_bonus_ct_lose_streak
     add ~l #~l_bonus
