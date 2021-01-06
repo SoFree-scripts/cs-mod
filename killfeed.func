@@ -1,0 +1,146 @@
+function killfeed_init()
+{
+  sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_die "kf_make_line"
+  set kf_topline "-32"
+  set kf_right_edge "472"
+  set kf_char_height "8"
+  set kf_total "1"
+}
+
+function kf_make_line(~par_slot, ~par_slot_killer, ~par_mod, ~par_flag)
+{
+  //each mod has an image associated with it
+  //kf_mod_pic_$~par_mod = "somefile.m32"
+  set ~killer_name ""
+  set ~victim_name ""
+  set ~method "@"
+  sp_sc_flow_if number cvar ~par_slot_killer == val -99
+  {
+    //suicide
+    set ~method "sk"
+  }
+  else
+  {
+    set ~method $~par_mod
+    sp_sv_info_client #~par_slot_killer
+    set ~killer_name #_sp_sv_info_client_name
+  }
+  sp_sv_info_client $~par_slot
+  set ~victim_name #_sp_sv_info_client_name 
+  //get name lengths
+  sp_sc_cvar_no_color ~k_len ~killer_name
+  sp_sc_cvar_len ~k_len ~k_len
+  sp_sc_cvar_math_mul ~k_len 8
+  sp_sc_cvar_list ~k_len
+  //lets say images have a fixed length of 8 chars
+  sset ~kf_line #~killer_name "< image >" #~victim_name
+  sp_sc_cvar_no_color ~s_len ~kf_line
+  //remove colours for now
+  set ~kf_line #~s_len
+  sp_sc_cvar_len ~s_len ~s_len
+  sp_sc_cvar_math_mul ~s_len 8
+
+
+
+  
+  //killers name length
+  sp_sc_cvar_sset ~attribute "kf_newline_" $kf_total "_len_name"
+  set $~attribute #~k_len
+  //total string length
+  sp_sc_cvar_sset ~attribute "kf_newline_" $kf_total "_len"
+  set $~attribute #~s_len
+  //mod
+  sp_sc_cvar_sset ~attribute "kf_newline_" $kf_total "_mod"
+  set $~attribute #~method
+  //string itself (without image)
+  sp_sc_cvar_sset ~attribute "kf_newline_" $kf_total
+  set $~attribute #~kf_line
+  //line height
+  set ~loc #kf_total
+  sp_sc_cvar_math_mul ~loc #kf_char_height 
+  add ~loc #kf_topline
+  sp_sc_cvar_sset ~attribute "kf_newline_" $kf_total "_loc"
+  set $~attribute #~loc
+  //draw it
+  add kf_total 1
+  sp_sc_cvar_list kf_newline_*
+  sp_sc_func_exec kf_drawline #kf_total #~k_len #~s_len #~method #~kf_line #~loc
+  sp_sc_timer 12000 "sp_sc_func_exec kf_shift"
+}
+
+function kf_drawline(~row,~k_len,~len,~mod,~line,~loc)
+{
+  echo "begin of drawline"
+  sp_sc_cvar_list ~*
+  set ~print_begin #kf_right_edge
+  add ~print_begin -$~len
+  sp_sc_cvar_list ~print_begin
+  sf_sv_draw_altstring #~print_begin #~loc #~line
+  //get method image and draw at location
+  //set mod image file some_char_mod_$~mod = shotgun.m32 e.g.
+  add ~print_begin $~k_len
+  add ~print_begin 16
+  //just test, so we should see "<@image >" if its correct
+  sf_sv_draw_string #~print_begin #~loc "@"
+  //12 seconds later, shift the killfeed
+}
+
+function kf_shift()
+{
+  echo "kf_shift called"
+  set ~counter 2
+  sp_sc_cvar_list kf_total ~counter
+  sf_sv_draw_clear
+  //can i even trust whiles? network overflow?
+  sp_sc_flow_while number cvar ~counter <= val #kf_total
+  {
+    echo "begin while loop"
+    
+    set ~above #~counter
+    add ~above -1
+    sp_sc_cvar_list ~counter ~above kf_total
+
+    //killers name length
+    sp_sc_cvar_sset ~attribute "kf_newline_" $~counter "_len_name"
+    sp_sc_cvar_copy ~k_len $~attribute
+    sp_sc_cvar_list ~k_len
+    sp_sc_cvar_sset ~shift "kf_newline_" $~above "_len_name"
+    set $~shift $~k_len
+    sp_sc_cvar_list $~shift
+
+    //total string length
+    sp_sc_cvar_sset ~attribute "kf_newline_" $~counter "_len"
+    sp_sc_cvar_copy ~len $~attribute
+    sp_sc_cvar_sset ~shift "kf_newline_" $~above "_len"
+    set $~shift #~len
+    sp_sc_cvar_list $~shift
+
+    //mod - for now, its hardcoded "@"
+    sp_sc_cvar_sset ~attribute "kf_newline_" $~counter "_mod"
+    sp_sc_cvar_copy ~method $~attribute
+    sp_sc_cvar_sset ~shift "kf_newline_" $~above "_mod"
+    set $~shift $~method
+    sp_sc_cvar_list $~shift
+
+    //string itself (without image)
+    sp_sc_cvar_copy ~line kf_newline_$~counter
+    set kf_newline_$~above #~line
+    sp_sc_cvar_list kf_newline_$~above
+
+    //line height
+    sp_sc_cvar_sset ~attribute "kf_newline_" $~counter "_loc"
+    sp_sc_cvar_copy ~loc $~attribute
+    add ~loc -$kf_char_height
+    sp_sc_cvar_sset ~shift "kf_newline_" $~above "_loc"
+    set $~shift $~loc
+    sp_sc_cvar_list $~shift
+
+    echo "end of shift"
+
+    sp_sc_func_exec kf_drawline #~above #~k_len #~len #~method #~line #~loc
+    add ~counter 1
+  }
+  add kf_total -1
+  sp_sc_cvar_list kf_total
+}
+
