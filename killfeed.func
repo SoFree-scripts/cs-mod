@@ -1,3 +1,5 @@
+//Todo: get client resolution instead of hardcoding for 640x480 
+// drawstring to specific clients
 function killfeed_init()
 {
   sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_die "kf_make_line"
