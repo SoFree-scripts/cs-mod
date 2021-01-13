@@ -1,0 +1,143 @@
+//Show damage given/taken to a client when they die or request it (todo)
+function bp_damage_init()
+{
+  sp_sc_func_exec spf_sc_list_add_func _sf_sv_on_client_die "given_taken_die"
+  sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_damage "dbg_dmg"
+  sp_sc_func_exec spf_sc_list_add_func _sp_sv_on_client_begin "bp_damage_begin"
+}
+function bp_damage_begin(*)
+{
+  set given_taken_$~1 ""
+}
+
+
+function dbg_dmg(*)
+{
+  set ~dmg_targ_classname #~1
+  set ~dmg_attacker_classname #~2
+  set ~dmg_inflictor_classname #~3
+  add ~4 -1;set ~dmg_targ_num #~4
+  add ~5 -1;set ~dmg_attacker_num #~5
+  set ~dmg_inflictor_num #~6
+  set ~dmg_mod #~7
+  set ~dmg_taken #~8
+  sp_sc_flow_if number cvar ~dmg_taken > val 0
+  {
+    sp_sc_flow_if text cvar ~dmg_targ_classname == val "player"
+    {
+      //a player was damaged
+      sp_sc_flow_if number cvar ~dmg_targ_num != cvar ~dmg_attacker_num
+      {
+        sp_sc_flow_if number cvar ~dmg_attacker_num >= val 0
+        {
+          sp_sc_flow_if number cvar ~dmg_attacker_num < val #maxclients
+          {
+            //play hitsound
+            //echo "BEEP?"
+            //sp_sc_func_exec entSoundPlay #~dmg_attacker_num "sofree/hitsound.wav" 0 1
+            //msg to attacker
+            sp_sv_info_client #~dmg_targ_num
+            sp_sc_cvar_sset ~msg "%03" #~dmg_taken "%04 Damage %03==> %07" #_sp_sv_info_client_name
+            sp_sc_cvar_unescape ~msg ~msg
+            sp_sv_print_client #~dmg_attacker_num #~msg
+            //msg to victim
+            sp_sv_info_client #~dmg_attacker_num
+            sp_sc_cvar_sset ~msg "%02-" #~dmg_taken "%04 Damage %02<== %07" #_sp_sv_info_client_name
+            sp_sc_cvar_unescape ~msg ~msg
+            sp_sv_print_client #~dmg_targ_num #~msg
+
+            sp_sc_func_exec given_taken_die #~dmg_targ_num #~dmg_attacker_num  #~dmg_taken ""
+            sp_sc_func_exec given_taken_die #~dmg_attacker_num  #~dmg_targ_num #~dmg_taken "given"
+          }
+        } 
+      }
+    }
+  }
+}
+
+function given_taken_die(*)
+{
+  set ~slot #~1
+  set ~victim #~1
+  set ~open 0
+  set ~delay 1
+  sp_sc_cvar_split ~given "!" given_taken_$~victim
+  sp_sc_flow_if text cvar ~given_1 != val ""
+  {
+    sp_sc_cvar_list ~given_1
+    set ~counter 1
+    sp_sc_cvar_split ~data "?" ~given_1
+    set ~open 1
+    sp_sv_print_client #~victim "________________________________________________"
+    set ~sp " "
+    sp_sc_cvar_nbsp ~sp ~sp;sp_sv_print_client #~victim #~sp
+
+    sp_sc_flow_while number cvar ~counter < val #~data_0
+    {
+      sp_sc_cvar_split ~data_tmp ":" ~data_$~counter
+      set ~slot #~data_tmp_1;set ~hits #~data_tmp_2;set ~damage #~data_tmp_3
+      sp_sv_info_client #~slot
+      set ~plural? "hits"
+      
+      sp_sc_flow_if number cvar ~hits == val 1
+      {
+        set ~plural? "hit"
+      }
+      sp_sc_cvar_sset ~str "%03Damage Given to %01''" #_sp_sv_info_client_name "%01'' -%03 " #~damage " %04in%03 " #~hits "%04 " #~plural?
+      sp_sc_cvar_unescape ~str ~str
+      sp_sc_cvar_hex ~str ~str
+      sp_sc_cvar_sset ~cmd "set ~tmp " #~str "; sp_sc_cvar_unhex ~tmp ~tmp; sp_sv_print_client " #~victim " #~tmp"
+      sp_sc_cvar_list ~cmd
+      sp_sc_timer $~delay #~cmd
+      add ~delay 100
+      add ~counter 1
+    }
+  }
+
+  sp_sc_flow_if text cvar ~given_2 != val ""
+  {
+    set ~counter 1
+    sp_sc_cvar_split ~data_2 "?" ~given_2
+    sp_sc_flow_if number cvar ~open == val 0
+    {
+      set ~open 1
+      //empty line after ___ so it looks better maybe
+      sset ~cmd sp_sv_print_client #~victim "________________________________________________"
+      set ~sp " "
+      sp_sc_cvar_nbsp ~sp ~sp;sset ~empty sp_sv_print_client #~victim #~sp
+      sp_sc_timer #~delay #~cmd
+      sp_sc_timer #~delay #~empty
+      add ~delay 100
+    }
+    sp_sc_flow_while number cvar ~counter < val #~data_2_0
+    {
+      sp_sc_cvar_split ~data_tmp_2 ":" ~data_2_$~counter
+      set ~slot #~data_tmp_2_1;set ~hits #~data_tmp_2_2;set ~damage #~data_tmp_2_3
+      sp_sv_info_client #~slot
+      set ~plural? "hits"
+      sp_sc_flow_if number cvar ~hits == val 1
+      {
+        set ~plural? "hit"
+      }
+      sp_sc_cvar_sset ~str "%02Damage Taken from %01''" #_sp_sv_info_client_name "%01'' -%02 " #~damage " %04in%02 " #~hits " %04 " #~plural?
+      sp_sc_cvar_unescape ~str ~str
+      sp_sc_cvar_hex ~str ~str
+      sp_sc_cvar_sset ~cmd "set ~tmp " #~str "; sp_sc_cvar_unhex ~tmp ~tmp; sp_sv_print_client " #~victim " #~tmp"
+      sp_sc_cvar_list ~cmd
+      echo "do timer"
+      sp_sc_cvar_list ~delay
+      sp_sc_timer $~delay #~cmd
+      echo "after timer"
+      add ~delay 100
+      add ~counter 1
+    }
+  }
+  sp_sc_flow_if number cvar ~open == val 1
+  {
+    //close it
+    echo "**********************CLOSE IT"
+    sset ~cmd sp_sv_print_client #~victim "________________________________________________"   
+    sp_sc_timer #~delay #~cmd
+  }
+  set given_taken_$~victim ""
+}
