@@ -9,4 +9,6 @@ http://sof1.megalag.org/sofplus/download/sofplus-manual.html
 I've created my own manual/tutorials to help others learn  SoFplus scripting (the pdf's in this project)
 
 
-_sp_cl_vid_mode == clients resolution (available via .check) which can be used for placing text on screen e.g. killfeed
+_missing things_
+- needs 'gimme' (easier) method to spawn items / weapons on clients that they buy 
+- damage info 
