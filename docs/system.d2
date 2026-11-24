@@ -1,0 +1,88 @@
+# cs-mod — system overview
+# A Counter-Strike style bomb/defuse gametype for Soldier of Fortune, written
+# entirely in SoFplus server scripting, plus commands only SoFree provides.
+# Zones run left to right: entry points -> core -> state -> external.
+# Style classes set strokes only, so light and dark stay readable.
+
+title: |md
+  # cs-mod
+  A bomb-plant gametype for Soldier of Fortune 1: two teams, one C4, round state machine, cash economy — all in SoFplus server script.
+| {near: top-center}
+
+direction: right
+grid-columns: 2
+grid-rows: 2
+horizontal-gap: 90
+vertical-gap: 90
+
+entry: Entry points {
+  direction: down
+
+  cfg: `spf_sv_fsm.cfg` · every tuning knob in one file: round count, timings, start cash, per-weapon bonus
+  fsm: `spf_sv_fsm_init` · binds the round machine to map begin and to client begin, die, spawn, disconnect
+  bomb: `bombplant_init` · subscribes the bomb to the same hooks plus use press and release
+  cmd: admin and player commands · `.play`, `.spec`, and one `dm/<mapname>` function per map with hand-placed sites
+  pdf: the two PDFs · the author's own SoFplus scripting course, read by humans, nothing reads them
+}
+
+core: Core {
+  direction: down
+  grid-columns: 2
+
+  wait: wait for players · 1 s timer re-execs itself, starts only with 2+ players, restarts the map after 24 h
+  count: count down · 3 s of broadcast numbers, then round start
+  plant: plant it · 500 ms ticks up `G_bomb_plant_timer`, then spawn a `misc_generic_wpn_c4` entity
+  defuse: defuse it · 500 ms ticks to `G_bomb_defuse_timer` 5000, player frozen
+  check: check once per second · explosion, defusal, elimination or timeout picks a winner
+  end: end the round · clears bomb state, pays loser money with a streak up to a 3400 cap, prints scores
+  pick: pick a bomb carrier · walks every slot for team 2, `sp_sc_cvar_random_int` over that list
+  site: bomb sites · dust2002 A and B hardcoded in init, per-map `dm/<name>` in `bombplant_areas.func`
+  money: economy · `bp_money_<slot>` cash, win/loss/plant/defuse bonuses, 16000 ceiling
+  sound: `sf_sv_play_sound_queue.func` · one sound per slot at a time, chained by length cvar
+  ent: `ent_helper.func` · entity field wrappers, and `spawn_a_trigger` builds each site box
+  hud: `killfeed.func` plus `spf_sv_fsm_rh` · kill rows drawn in screen space, round scores at the end
+  dmg: `-bp_damage.func` · damage accounting, disabled by the leading dash in its filename
+
+  wait -> count
+  count -> check
+  plant -> check
+  defuse -> check
+  check -> end
+  end -> count: next round or new map
+  pick -> plant
+}
+
+state: State {
+  direction: down
+
+  cvars: `G_bomb_*`, `G_round_ended`, `bp_round_inprogress` · all game state is server cvars {shape: cylinder}
+  slots: `bp_money_<slot>`, `_spf_sv_fsm_play_<slot>`, `_spf_sv_fsm_round_death_<slot>` · one row per slot {shape: cylinder}
+  epoch: `_sp_sv_info_map_count` · token every timer carries, so a map change strands stale loops
+  disk: no files, no database · a map change is a full reset, cash and streaks included
+}
+
+ext: External {
+  direction: down
+
+  sofree: SoFree server client · unreleased; `sp_sc_*`, `sf_sv_*` and `_sf_sv_on_use_*` are not in stock SoFplus
+  plus: SoFplus script VM · `spf_sc_list_add_func`, `sp_sc_timer`, `sp_sc_flow_*`, quoted cfg values
+  engine: SoF.exe · entity spawn and field set, `slotSoundPlay`, `sp_sv_client_spec`, `sp_sv_client_swap`
+  maps: `dm/*.bsp` · each map name must also have a `dm/<name>` function, or it keeps the dust2002 boxes
+  manual: SoFplus scripting manual · the language reference the two PDFs teach and the scripts assume
+}
+
+entry -> core: the cfg tunes it, the init functions wire it into engine events
+core -> state: every rule is a cvar write, then read back by a timer
+core -> ext: entity, sound and team calls, all through SoFree command names
+
+classes: {
+  entry: {style: {stroke: "#2f6fbf"}}
+  core: {style: {stroke: "#2f8f5f"}}
+  state: {style: {stroke: "#a86a12"; stroke-dash: 3}}
+  ext: {style: {stroke: "#8a4fbf"; stroke-dash: 5}}
+}
+
+entry.class: entry
+core.class: core
+state.class: state
+ext.class: ext

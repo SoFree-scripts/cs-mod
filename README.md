@@ -1,3 +1,5 @@
+Prefer pictures? Start with **[HUMANS.md](HUMANS.md)**.
+
 # cs-mod
 Bombplant/Defuse mod for Soldier of Fortune I (Requires an SoFree server client which is unreleased for now)
 
